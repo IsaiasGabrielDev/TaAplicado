@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "wwwroot/index.html"
+        ],
+        "createdAt": "2026-09-23T23:33:00.867Z",
+        "reason": "user chose the 'Objeto Registrado' direction (AskUserQuestion), whose palette names ruled form paper #F4F1E8 as the ground"
+      }
+    ]
+  }
+}

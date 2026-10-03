@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-23T21:00:00-03:00",
+  "title": "Design System: LinkedInAutoApply",
+  "extensions": {
+    "colorMeta": {
+      "ink": { "role": "primary", "displayName": "Ledger Navy", "canonical": "oklch(29.3% 0.060 263)", "tonalRamp": ["#010824", "#142341", "#2F3F60", "#4C5D80", "#6E80A5", "#91A5CB", "#B6CBF3", "#DAEFFF"] },
+      "ink-2": { "role": "primary", "displayName": "Faded Ink", "canonical": "oklch(45.3% 0.045 265)", "tonalRamp": ["#040A1E", "#19233A", "#343F58", "#515D78", "#73809C", "#97A5C2", "#BCCBE9", "#E0EFFF"] },
+      "ink-3": { "role": "primary", "displayName": "Pencil Grey Ink", "canonical": "oklch(51.4% 0.035 266)", "tonalRamp": ["#050A1A", "#1C2435", "#373F53", "#555D72", "#778096", "#9BA4BB", "#C0CAE2", "#E4EEFF"] },
+      "kraft-soft": { "role": "secondary", "displayName": "Kraft Card", "canonical": "oklch(89.0% 0.036 81)", "tonalRamp": ["#130900", "#2D220F", "#493E2A", "#685C47", "#8B7E68", "#B0A38C", "#D7C9B1", "#FBEDD4"] },
+      "kraft": { "role": "secondary", "displayName": "Kraft", "canonical": "oklch(66.9% 0.093 71)", "tonalRamp": ["#200000", "#3E1800", "#5E3500", "#7E5316", "#A3763D", "#CA9B62", "#F1C187", "#FFE5AC"] },
+      "kraft-ink": { "role": "secondary", "displayName": "Kraft Ink", "canonical": "oklch(47.8% 0.079 68)", "tonalRamp": ["#1E0100", "#3C1A00", "#5A3703", "#7B5528", "#9F774B", "#C69C6E", "#EDC293", "#FFE6B6"] },
+      "meter-ink": { "role": "secondary", "displayName": "Meter Ink", "canonical": "oklch(32.7% 0.031 80)", "tonalRamp": ["#120900", "#2C2212", "#483E2D", "#675C4A", "#8A7F6B", "#AFA38F", "#D5C9B4", "#FAEDD8"] },
+      "meter-label": { "role": "secondary", "displayName": "Meter Label", "canonical": "oklch(38.8% 0.063 69)", "tonalRamp": ["#1B0400", "#371D00", "#553917", "#755735", "#997A57", "#BF9E7A", "#E6C49F", "#FFE8C2"] },
+      "red": { "role": "tertiary", "displayName": "Registration Red", "canonical": "oklch(53.0% 0.207 22)", "tonalRamp": ["#2E0000", "#550000", "#7E0014", "#A91F2D", "#D4494E", "#F87776", "#FFA4A0", "#FFCDC8"] },
+      "red-soft": { "role": "tertiary", "displayName": "Red Wash", "canonical": "oklch(91.3% 0.032 5)", "tonalRamp": ["#160609", "#311E22", "#4F393D", "#6E565B", "#92797D", "#B79DA2", "#DEC2C7", "#FFE6EB"] },
+      "red-on-ink": { "role": "tertiary", "displayName": "Red on Ink", "canonical": "oklch(84.2% 0.090 8)", "tonalRamp": ["#250004", "#45091B", "#662836", "#884753", "#AE6975", "#D68D99", "#FEB2BE", "#FFD6E2"] },
+      "green": { "role": "tertiary", "displayName": "Delivered Green", "canonical": "oklch(52.9% 0.106 154)", "tonalRamp": ["#001400", "#003107", "#004F24", "#1D6E42", "#469363", "#6CB887", "#92DFAC", "#BDFFD2"] },
+      "paper": { "role": "neutral", "displayName": "Ruled Form Paper", "canonical": "oklch(95.8% 0.012 91)", "tonalRamp": ["#0D0B06", "#26241D", "#424038", "#605D56", "#838078", "#A7A49C", "#CDCAC2", "#F1EEE5"] },
+      "paper-2": { "role": "neutral", "displayName": "Counter Paper", "canonical": "oklch(91.9% 0.024 90)", "tonalRamp": ["#0F0B02", "#282417", "#443F32", "#635D4F", "#858071", "#AAA494", "#D0CABA", "#F4EEDD"] },
+      "sheet": { "role": "neutral", "displayName": "Slip White", "canonical": "oklch(99.4% 0.008 91)", "tonalRamp": ["#0C0B07", "#252420", "#41403B", "#5F5D58", "#82807B", "#A6A49F", "#CCCAC5", "#F0EEE8"] },
+      "field": { "role": "neutral", "displayName": "Form Field", "canonical": "oklch(98.2% 0.008 91)", "tonalRamp": ["#0C0B07", "#252420", "#41403B", "#5F5D58", "#82807B", "#A6A49F", "#CCCAC5", "#F0EEE8"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The pile count only; 4rem under 1080px." },
+      "headline": { "displayName": "Headline", "purpose": "Screen titles; profile gauge number at 2.5rem." },
+      "title": { "displayName": "Title", "purpose": "Aviso question (max 60ch); pile caption, panel and detail titles in the same face at smaller sizes." },
+      "body": { "displayName": "Body", "purpose": "All running text, tabular numerals on." },
+      "label": { "displayName": "Label", "purpose": "Field and counter labels; table headers at 0.78rem 600." },
+      "stamp": { "displayName": "Stamp", "purpose": "Rubber-stamp status, uppercase; the only uppercase in the system." },
+      "mono": { "displayName": "Mono", "purpose": "Code chips, badge, times, ledger dates." },
+      "counter": { "displayName": "Counter", "purpose": "Franking digit windows." }
+    },
+    "shadows": [
+      { "name": "slip-lift", "value": "0 1px 2px rgba(0,0,0,.05), 0 6px 18px -10px rgba(0,0,0,.22)", "purpose": "Aviso slips only; the one loose sheet on the desk." },
+      { "name": "tab-underline", "value": "inset 0 -2px 0 #1C2B4A", "purpose": "Active tab indicator (not elevation)." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(.16, 1, .3, 1)", "purpose": "Reel roll, stamp drop, gauge fill." },
+      { "name": "reel-roll", "value": "transform .6s var(--ease), 70ms stagger per digit", "purpose": "Franking digits rolling to a new count." },
+      { "name": "stamp-drop", "value": "transform .35s var(--ease), opacity .15s; scale 1.6 to 1 at -8deg", "purpose": "RETIRADO stamp landing on an answered slip." },
+      { "name": "state", "value": ".15s", "purpose": "Color/background transitions on tabs and buttons; button press translateY(1px) at .1s." },
+      { "name": "reduced-motion", "value": "all transitions 0s", "purpose": "prefers-reduced-motion: reduce disables every transition and delay." }
+    ],
+    "breakpoints": [
+      { "name": "narrow", "value": "1080px" },
+      { "name": "compact", "value": "700px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-filled action: Expedir, Retirar, Salvar remetente.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg class=\"ds-ic\" viewBox=\"0 0 20 20\"><path d=\"M3.5 10h11M10.5 5.5 15 10l-4.5 4.5\"/></svg><span>Expedir</span></button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: .45rem; min-height: 2.35rem; padding: 0 1rem; border: 1px solid #1C2B4A; border-radius: 3px; background: transparent; color: #1C2B4A; font: 600 .9rem/1 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; cursor: pointer; transition: background .15s, color .15s, transform .1s; } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid #1C2B4A; outline-offset: 2px; } .ds-btn-primary { background: #1C2B4A; color: #F4F1E8; } .ds-btn-primary:hover { background: #111C33; } .ds-ic { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
+    },
+    {
+      "name": "Outline Button (Parar)",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Ink outline; the stop button while a run is live. Never red.",
+      "html": "<button class=\"ds-btn\"><svg class=\"ds-ic\" viewBox=\"0 0 20 20\"><rect x=\"5.5\" y=\"5.5\" width=\"9\" height=\"9\" rx=\"1\"/></svg><span>Parar</span></button> <button class=\"ds-btn\" disabled><span>Parando…</span></button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: .45rem; min-height: 2.35rem; padding: 0 1rem; border: 1px solid #1C2B4A; border-radius: 3px; background: transparent; color: #1C2B4A; font: 600 .9rem/1 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; cursor: pointer; transition: background .15s, transform .1s; } .ds-btn:hover { background: #EAE4D3; } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 2px solid #1C2B4A; outline-offset: 2px; } .ds-btn:disabled { cursor: not-allowed; color: #5E677C; border-color: rgba(28,43,74,.22); background: repeating-linear-gradient(-45deg, #EAE4D3 0 6px, #F4F1E8 6px 12px); } .ds-ic { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Field-fill input with an ink-3 bottom edge; disabled shows the diagonal stripe.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"ex.: desenvolvedor .NET remoto\"> <input class=\"ds-input\" type=\"text\" value=\"25\" disabled>",
+      "css": ".ds-input { width: 16rem; padding: .45rem .6rem; background: #FBF9F3; border: 1px solid rgba(28,43,74,.22); border-bottom-color: #5E677C; border-radius: 3px; color: #1C2B4A; font: 14px/1.45 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; } .ds-input::placeholder { color: #5E677C; } .ds-input:hover { border-color: #5E677C; } .ds-input:focus-visible { outline: 2px solid #1C2B4A; outline-offset: 0; border-color: #1C2B4A; } .ds-input:disabled { color: #5E677C; cursor: not-allowed; background: repeating-linear-gradient(-45deg, #EAE4D3 0 6px, #F4F1E8 6px 12px); }"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Text tabs in the counter-paper bar; the Avisos tab carries the red waiting badge.",
+      "html": "<nav class=\"ds-bar\"><button class=\"ds-tab\" aria-current=\"page\">Expedir</button><button class=\"ds-tab\">Avisos <span class=\"ds-badge\">4</span></button><button class=\"ds-tab\">Registro</button></nav>",
+      "css": ".ds-bar { display: flex; gap: .25rem; padding: 0 1.5rem; background: #EAE4D3; border-bottom: 1px solid rgba(28,43,74,.22); } .ds-tab { display: flex; align-items: center; gap: .45rem; padding: 0 .85rem; min-height: 3.25rem; border: 0; background: none; color: #4A5670; font: 14px 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; cursor: pointer; box-shadow: inset 0 -2px 0 transparent; transition: color .15s, box-shadow .15s; } .ds-tab:hover { color: #1C2B4A; } .ds-tab:focus-visible { outline: 2px solid #1C2B4A; outline-offset: 2px; } .ds-tab[aria-current=page] { color: #1C2B4A; font-weight: 600; box-shadow: inset 0 -2px 0 #1C2B4A; } .ds-badge { min-width: 1.35rem; padding: 0 .35rem; background: #C8102E; color: #fff; font: 600 .75rem/1.35rem 'Cascadia Mono',Consolas,monospace; text-align: center; border-radius: 2px; }"
+    },
+    {
+      "name": "Registered Label (code chip)",
+      "kind": "chip",
+      "refersTo": "code-chip",
+      "description": "Every application's code: ink R block plus mono number grouped in threes. Ink, never red.",
+      "html": "<span class=\"ds-code\"><span>4 029 915 530</span></span>",
+      "css": ".ds-code { display: inline-flex; align-items: stretch; border: 1px solid #1C2B4A; border-radius: 2px; overflow: hidden; font: 500 .78rem/1 'Cascadia Mono','Cascadia Code',Consolas,monospace; white-space: nowrap; } .ds-code::before { content: 'R'; display: grid; place-items: center; padding: 0 .3rem; background: #1C2B4A; color: #F4F1E8; font-weight: 700; } .ds-code span { padding: .25rem .4rem; color: #1C2B4A; background: #FFFDF7; letter-spacing: .04em; }"
+    },
+    {
+      "name": "Rubber Stamps",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Status as an unfilled, rotated rubber stamp coloured by status.",
+      "html": "<span class=\"ds-stamp ds-applied\">Entregue</span> <span class=\"ds-stamp ds-waiting\">Aguardando você</span> <span class=\"ds-stamp\">Na fila</span> <span class=\"ds-stamp ds-skip\">Pulada</span> <span class=\"ds-stamp ds-failed\">Falhou</span>",
+      "css": ".ds-stamp { display: inline-block; margin: .3rem; padding: .12rem .45rem; border: 2px solid currentColor; border-radius: 4px; color: #1C2B4A; font: 700 .72rem/1.2 'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif; letter-spacing: .06em; text-transform: uppercase; transform: rotate(-2deg); white-space: nowrap; } .ds-applied { color: #2F7D4F; } .ds-waiting { color: #C8102E; } .ds-skip { color: #7A5427; } .ds-failed { color: #4A5670; }"
+    },
+    {
+      "name": "Franking Counter",
+      "kind": "custom",
+      "refersTo": "digit",
+      "description": "Four flat ink digit windows on kraft card; leading zeros dimmed; the waiting counter's digits in red-on-ink.",
+      "html": "<div class=\"ds-meter\"><div><span class=\"ds-label\">Entregues</span><span class=\"ds-digits\"><span class=\"ds-digit ds-lead\">0</span><span class=\"ds-digit ds-lead\">0</span><span class=\"ds-digit ds-lead\">0</span><span class=\"ds-digit\">6</span></span></div><div><span class=\"ds-label\">Aguardando você</span><span class=\"ds-digits\"><span class=\"ds-digit ds-lead\">0</span><span class=\"ds-digit ds-lead\">0</span><span class=\"ds-digit ds-lead\">0</span><span class=\"ds-digit ds-hot\">4</span></span></div></div>",
+      "css": ".ds-meter { display: grid; grid-template-columns: repeat(2, auto); gap: 1rem 1.25rem; padding: 1.25rem; background: #E7D9C1; border: 1px solid rgba(122,84,39,.35); border-radius: 3px; } .ds-label { display: block; margin-bottom: .3rem; font: .8rem 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; color: #5A3E1C; } .ds-digits { display: inline-flex; gap: 2px; } .ds-digit { width: 1.55rem; height: 2.3rem; background: #1C2B4A; border-radius: 2px; color: #F4F1E8; font: 500 1.35rem/2.3rem 'Cascadia Mono','Cascadia Code',Consolas,monospace; text-align: center; } .ds-lead { color: rgba(244,241,232,.28); } .ds-hot { color: #FFB3BF; }"
+    },
+    {
+      "name": "Aviso Slip",
+      "kind": "card",
+      "refersTo": "slip",
+      "description": "The one loose sheet: perforated top, slip shadow, question and in-place answer.",
+      "html": "<form class=\"ds-slip\"><p class=\"ds-q\">Qual é o seu nível de inglês?</p><p class=\"ds-note\">Sugestão do Claude: <b>Intermediário</b>. Ele não teve certeza pelo seu perfil.</p><div class=\"ds-row\"><label class=\"ds-choice\"><input type=\"radio\" name=\"l\"><span>Básico</span></label><label class=\"ds-choice\"><input type=\"radio\" name=\"l\" checked><span>Intermediário</span></label><button class=\"ds-go\" type=\"button\">Retirar</button></div></form>",
+      "css": ".ds-slip { position: relative; margin-top: 6px; padding: 1rem 1.25rem 1.1rem; background: #FFFDF7; color: #1C2B4A; border: 1px solid rgba(28,43,74,.22); border-radius: 0 0 3px 3px; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 6px 18px -10px rgba(0,0,0,.22); font: 14px/1.45 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; } .ds-slip::before { content: ''; position: absolute; left: -1px; right: -1px; top: -5px; height: 5px; background: radial-gradient(circle at 5px 5px, #F4F1E8 2.5px, #FFFDF7 3px) 0 0 / 10px 5px repeat-x; border-inline: 1px solid rgba(28,43,74,.22); } .ds-q { margin: 0 0 .75rem; font: 600 1.1rem/1.35 'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif; } .ds-note { margin: 0 0 .75rem; font-size: .85rem; color: #4A5670; } .ds-row { display: flex; gap: .4rem; align-items: stretch; } .ds-choice { position: relative; } .ds-choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; } .ds-choice span { display: block; padding: .4rem .75rem; border: 1px solid rgba(28,43,74,.22); border-radius: 3px; background: #FBF9F3; } .ds-choice input:hover + span { border-color: #5E677C; } .ds-choice input:checked + span { background: #1C2B4A; color: #F4F1E8; border-color: #1C2B4A; } .ds-choice input:focus-visible + span { outline: 2px solid #1C2B4A; outline-offset: 2px; } .ds-go { margin-left: auto; min-height: 2.35rem; padding: 0 1rem; border: 1px solid #1C2B4A; border-radius: 3px; background: #1C2B4A; color: #F4F1E8; font: 600 .9rem/1 inherit; cursor: pointer; } .ds-go:hover { background: #111C33; } .ds-go:focus-visible { outline: 2px solid #1C2B4A; outline-offset: 2px; }"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "filter-pressed",
+      "description": "Ledger filters with mono counts; pressed inverts to ink.",
+      "html": "<div class=\"ds-filters\"><button class=\"ds-filter\" aria-pressed=\"true\">Todos <b>12</b></button><button class=\"ds-filter\" aria-pressed=\"false\">Entregues <b>6</b></button></div>",
+      "css": ".ds-filters { display: flex; gap: .35rem; } .ds-filter { display: inline-flex; gap: .4rem; align-items: center; padding: .3rem .7rem; border: 1px solid rgba(28,43,74,.22); border-radius: 3px; background: #FBF9F3; color: #4A5670; font: .85rem 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; cursor: pointer; } .ds-filter b { font: 600 .78rem 'Cascadia Mono',Consolas,monospace; color: #1C2B4A; } .ds-filter:hover { border-color: #5E677C; } .ds-filter:focus-visible { outline: 2px solid #1C2B4A; outline-offset: 2px; } .ds-filter[aria-pressed=true] { background: #1C2B4A; border-color: #1C2B4A; color: #F4F1E8; } .ds-filter[aria-pressed=true] b { color: #F4F1E8; }"
+    },
+    {
+      "name": "Receipt",
+      "kind": "custom",
+      "refersTo": "receipt",
+      "description": "Registro detail: each answer sent in the user's name sits directly beside its question.",
+      "html": "<dl class=\"ds-receipt\"><dt>Anos de experiência com C#</dt><dd>4</dd><dt>Disponibilidade para início</dt><dd>Imediata</dd></dl>",
+      "css": ".ds-receipt { margin: 0; display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); gap: 0 1.5rem; color: #1C2B4A; font: 14px/1.45 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif; } .ds-receipt dt, .ds-receipt dd { margin: 0; padding: .3rem 0; border-top: 1px solid rgba(28,43,74,.10); font-size: .85rem; } .ds-receipt dd { font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Objeto Registrado",
+    "overview": "The app is a registered-mail counter. Every job application is a registered object: it gets a code on a registered label, an event trail as it moves, a rubber-stamped status, and a receipt of exactly what was sent in the user's name. The window is a sheet of ruled form paper in navy ink, with kraft card for the machinery (the franking meter, the tracking log) and one registration red that means only \"this is waiting on you\".\n\nDensity is real: the ledger runs at a 2.25rem row, counts are tabular monospace, and nothing is padded into cards for decoration. Scale follows urgency instead of hierarchy: the number of avisos waiting is the largest thing on screen, and it goes grey when it hits zero. The system refuses the generic dark sidebar, KPI-card and table dashboard; its structure comes from postal objects (slips, labels, stamps, counters, receipts), not from panels.",
+    "keyCharacteristics": [
+      "Light ruled paper ground, navy ink for text and every primary action.",
+      "Registration red reserved for things waiting on the user.",
+      "Postal objects as components: registered-label code chips, rubber stamps, a torn aviso slip, a franking counter with digit windows.",
+      "Tabular numerals everywhere; Cascadia Mono for codes, counts, times.",
+      "Small, near-square corners (2-4px); flat surfaces with one soft paper shadow on slips.",
+      "Diagonal stripe is the only disabled signal."
+    ],
+    "rules": [
+      { "name": "The Waiting Red Rule", "body": "Red (#C8102E and its red-soft / red-on-ink derivatives) marks only what is waiting on the user: the pile count, the tab badge, the AGUARDANDO VOCÊ stamp, the waiting counter digit, the profile gap count, the login-needed strip. Code chips, the brand mark and the stop button are ink. If it does not need the user, it is not red.", "section": "colors" },
+      { "name": "The Status Ink Rule", "body": "Status colours live in stamps and trail end markers, not in fills: green delivered, red waiting, kraft-ink skipped, ink queued/test, ink-2 failed.", "section": "colors" },
+      { "name": "The Urgency Scale Rule", "body": "Size follows what waits on the user, not page hierarchy: the waiting count outranks every heading.", "section": "typography" },
+      { "name": "The Machine Type Rule", "body": "Codes, counts, times and the profile sheet are Cascadia Mono; prose is never mono.", "section": "typography" },
+      { "name": "The One Loose Sheet Rule", "body": "Only the aviso slip casts a shadow, because it is the only thing the user picks up. Panels, tables and controls stay flat.", "section": "elevation" },
+      { "name": "The Stripe Means Disabled Rule", "body": "A -45deg stripe of paper-2 and paper (6px bands) marks a disabled input or button, and nothing else. Never use it as texture, emphasis or progress.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do keep red for what waits on the user: pile count, tab badge, AGUARDANDO VOCÊ stamp, waiting digit, profile gap count, login-needed strip.",
+      "Do render every application code as a registered label (ink \"R\" block plus mono number).",
+      "Do show status as a rotated rubber stamp, coloured by status, unfilled.",
+      "Do give franking digits flat ink windows with dimmed leading zeros.",
+      "Do put receipt answers directly beside their questions.",
+      "Do set codes, counts and times in Cascadia Mono with tabular numerals."
+    ],
+    "donts": [
+      "Don't make the code chip, brand mark or stop button red; they are ink.",
+      "Don't use the diagonal stripe for anything but disabled.",
+      "Don't give panels or tables shadows; only the aviso slip lifts.",
+      "Don't build the dark sidebar, KPI-card and table dashboard this system replaces.",
+      "Don't use uppercase outside stamps."
+    ]
+  }
+}

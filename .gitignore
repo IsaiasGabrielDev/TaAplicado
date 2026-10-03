@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+*.user
+
+# impeccable: review captures and transient tool state
+.impeccable/review/
+.impeccable/live/
+.impeccable/questions/
+.impeccable/hook.cache.json
+dist/
+.impeccable/critique/

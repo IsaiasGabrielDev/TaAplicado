@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tá Aplicado</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-send" viewBox="0 0 20 20"><path d="M3.5 10h11M10.5 5.5 15 10l-4.5 4.5"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 20 20"><rect x="5.5" y="5.5" width="9" height="9" rx="1"/></symbol>
+  <symbol id="i-open" viewBox="0 0 20 20"><path d="M8.5 4.5h-4v11h11v-4M11.5 4.5h4v4M15.5 4.5l-7 7"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 20 20"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.5h6.6L14 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 20 20"><circle cx="9" cy="9" r="4.5"/><path d="m12.5 12.5 3.5 3.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 20 20"><path d="m4.5 10.5 3.5 3.5 7.5-8"/></symbol>
+  <symbol id="i-down" viewBox="0 0 20 20"><path d="m6 8 4 4 4-4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 20 20"><path d="M7.5 5 4 8.5 7.5 12M4 8.5h7.5a4 4 0 0 1 0 8H9"/></symbol>
+</svg>
+
+<p class="sr" id="live" aria-live="polite"></p>
+
+<header class="bar">
+  <div class="brand"><img class="brand-mark" src="icon.png" alt="" aria-hidden="true"><span class="brand-text">Tá Aplicado</span></div>
+  <nav class="tabs" aria-label="Telas">
+    <button class="tab" data-screen="expedir" aria-current="page" title="Ctrl+1" aria-keyshortcuts="Control+1">Candidatar</button>
+    <button class="tab" data-screen="avisos" title="Ctrl+2" aria-keyshortcuts="Control+2">Avisos <span class="badge" id="badge" hidden></span></button>
+    <button class="tab" data-screen="registro" title="Ctrl+3" aria-keyshortcuts="Control+3">Histórico</button>
+    <button class="tab" data-screen="caixa" title="Ctrl+4" aria-keyshortcuts="Control+4">Respostas salvas <span class="badge ink" id="review-badge" hidden></span></button>
+    <button class="tab" data-screen="remetente" title="Ctrl+5" aria-keyshortcuts="Control+5">Perfil</button>
+    <button class="tab" data-screen="perguntar" title="Ctrl+6" aria-keyshortcuts="Control+6">Perguntar</button>
+  </nav>
+  <span class="demo-flag" id="demo-flag" hidden>Demonstração · dados fictícios</span>
+  <fieldset class="seg lang" aria-label="Idioma">
+    <label><input type="radio" name="lang" value="pt"><span>PT</span></label>
+    <label><input type="radio" name="lang" value="en"><span>EN</span></label>
+  </fieldset>
+  <div class="who">
+    <button class="who-btn" id="who" type="button" popovertarget="who-menu">
+      <span class="who-label">Usuário</span>
+      <span class="who-name" id="who-name"></span>
+      <svg class="ic" aria-hidden="true"><use href="#i-down"/></svg>
+    </button>
+    <div class="who-menu" id="who-menu" popover aria-label="Trocar de usuário">
+      <p class="who-title">Quem está usando o app?</p>
+      <ul class="who-list" id="who-list"></ul>
+      <form class="who-new" id="who-new">
+        <label class="sr" for="who-new-name">Nome de quem vai usar</label>
+        <input id="who-new-name" type="text" placeholder="Nome de quem vai usar" autocomplete="off" maxlength="40">
+        <button class="btn" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span>Novo usuário</span></button>
+      </form>
+      <p class="who-note" id="who-note" hidden>Pare a execução para trocar de usuário.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- CANDIDATAR -->
+  <section class="screen" id="expedir">
+    <h1 class="sr">Candidatar</h1>
+    <section class="setup" id="setup" hidden aria-labelledby="setup-title">
+      <h2 id="setup-title">Antes de começar</h2>
+      <ol class="setup-list" id="setup-list"></ol>
+    </section>
+
+    <form class="dispatch" id="dispatch">
+      <fieldset class="seg site" aria-label="Site das vagas">
+        <label><input type="radio" name="site" value="linkedin" checked><span>LinkedIn</span></label>
+        <label><input type="radio" name="site" value="indeed"><span>Indeed</span></label>
+      </fieldset>
+      <fieldset class="seg" id="origin" aria-label="Origem das vagas">
+        <label><input type="radio" name="mode" value="recommended" checked><span>Recomendadas</span></label>
+        <label><input type="radio" name="mode" value="preferences"><span>Baseado nas preferências</span></label>
+        <label><input type="radio" name="mode" value="profile"><span>Combinam com seu perfil</span></label>
+        <label><input type="radio" name="mode" value="search"><span>Pesquisa</span></label>
+      </fieldset>
+      <label class="field grow">
+        <span class="field-label">Termos da pesquisa</span>
+        <input name="terms" type="text" placeholder="ex.: desenvolvedor .NET remoto" autocomplete="off">
+      </label>
+      <label class="field narrow">
+        <span class="field-label">Máximo</span>
+        <input name="max" type="number" min="1" max="100" value="25">
+      </label>
+      <fieldset class="seg run" aria-label="Tipo de execução">
+        <label><input type="radio" name="run" value="real" checked><span>De verdade</span></label>
+        <label><input type="radio" name="run" value="test"><span>Teste</span></label>
+      </fieldset>
+      <fieldset class="seg" aria-label="Seleção das vagas">
+        <label><input type="radio" name="pick" value="normal" checked><span>Normal</span></label>
+        <label><input type="radio" name="pick" value="ultra"><span>Ultra seleção</span></label>
+      </fieldset>
+      <label class="field narrow" id="min-wrap" hidden>
+        <span class="field-label">Nota mínima <span class="field-scale">0–100</span></span>
+        <input name="minScore" type="number" min="0" max="100" value="70">
+      </label>
+      <div class="go-wrap">
+        <button class="btn primary" id="go" type="submit" aria-describedby="go-note"></button>
+        <button class="btn" id="go-queue" type="button" hidden></button>
+        <small class="go-note" id="go-note"></small>
+        <p class="run-mode" id="run-mode" hidden></p>
+      </div>
+      <div class="suggest" id="suggest" hidden>
+        <span class="field-label">Pesquisas para o seu perfil</span>
+        <div class="suggest-list" id="suggest-list"></div>
+        <button class="link" id="suggest-go" type="button"></button>
+      </div>
+    </form>
+
+    <div class="ficha" id="ficha"></div>
+
+    <p class="login-strip" id="login" role="status" hidden></p>
+
+    <div class="desk" id="desk">
+      <div class="pile">
+        <div class="pile-head">
+          <span class="pile-count" id="pile-count">0</span>
+          <span class="pile-caption" id="pile-caption">avisos esperando você</span>
+        </div>
+        <p class="nudge" id="nudge" hidden></p>
+        <div id="pile-list" class="slips"></div>
+      </div>
+
+      <aside class="meter">
+        <div class="run-receipt" id="receipt" hidden></div>
+        <h2 class="panel-title">Desde o início</h2>
+        <div class="franking" id="franking"></div>
+        <h2 class="panel-title" id="transit-title">Em andamento</h2>
+        <div id="transit"></div>
+        <h2 class="panel-title">Atividade</h2>
+        <ol class="track" id="track"></ol>
+      </aside>
+    </div>
+  </section>
+
+  <!-- AVISOS -->
+  <section class="screen" id="avisos" hidden>
+    <div class="screen-head">
+      <h1>Avisos</h1>
+      <p>Perguntas que o Claude não soube responder pelo seu perfil. Ao responder, a resposta vai para Respostas salvas e a vaga volta para a fila da próxima execução.</p>
+      <button class="btn" id="retry" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg><span>Pedir ao Claude de novo</span></button>
+    </div>
+    <div id="avisos-list" class="slips wide"></div>
+  </section>
+
+  <!-- HISTÓRICO -->
+  <section class="screen" id="registro" hidden>
+    <div class="screen-head">
+      <h1>Histórico</h1>
+      <div class="filters" id="filters" role="group" aria-label="Filtrar por situação"></div>
+      <label class="search">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="ledger-search" type="search" placeholder="Buscar vaga ou empresa" aria-label="Buscar vaga ou empresa">
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead><tr><th>Vaga</th><th>Título</th><th>Empresa</th><th>Data</th><th>Situação</th><th><span class="sr">Abrir no LinkedIn</span></th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- RESPOSTAS SALVAS -->
+  <section class="screen" id="caixa" hidden>
+    <div class="screen-head">
+      <h1>Respostas salvas</h1>
+      <p class="filter-count" id="answer-count" aria-live="polite"></p>
+      <button class="link" id="answer-clear" type="button" hidden>Limpar filtros</button>
+      <button class="btn" id="review-all" type="button" hidden><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>Aprovar todas</span></button>
+    </div>
+    <p class="screen-intro" id="answers-intro"></p>
+    <div class="table-wrap">
+      <table class="ledger answers">
+        <thead>
+          <tr><th>Pergunta</th><th>Resposta</th><th>Origem</th><th><span class="sr">Ações</span></th></tr>
+          <tr class="col-filters">
+            <th><input id="f-q" type="search" placeholder="Filtrar pergunta" aria-label="Filtrar pela pergunta" autocomplete="off"></th>
+            <th><input id="f-a" type="search" placeholder="Filtrar resposta" aria-label="Filtrar pela resposta" autocomplete="off"></th>
+            <th><select id="f-o" aria-label="Filtrar pela origem">
+              <option value="">Todas</option>
+              <option value="you">Você</option>
+              <option value="review">Claude · a conferir</option>
+              <option value="ok">Claude · conferida</option>
+            </select></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="answers"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- PERFIL -->
+  <section class="screen" id="remetente" hidden>
+    <div class="screen-head">
+      <h1>Perfil</h1>
+      <p>Tudo o que o Claude responde sai em seu nome, a partir destas respostas. Pergunta em branco vira aviso quando uma vaga perguntar.</p>
+    </div>
+    <details class="import" id="import">
+      <summary>Importar do LinkedIn ou de um texto <small>link do perfil, currículo, anotações</small></summary>
+      <form class="import-link" id="import-link">
+        <label class="field grow">
+          <span class="field-label">Link do perfil no LinkedIn</span>
+          <input id="import-url" type="text" inputmode="url" placeholder="linkedin.com/in/seu-nome" autocomplete="off" spellcheck="false">
+        </label>
+        <button class="btn primary" id="import-url-go" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg><span>Ler o perfil</span></button>
+      </form>
+      <p class="save-note import-url-note" id="import-url-note" aria-live="polite"></p>
+      <p class="import-hint">O app abre o perfil na janela do Chrome dele (com o seu login do LinkedIn), lê experiência, formação, competências, certificações e idiomas, e manda o texto ao Claude. Se pedir login, entre na janela do Chrome.</p>
+      <p class="import-or">Ou cole um texto</p>
+      <p>Cole o texto e o Claude preenche as perguntas em branco e acrescenta às listas (tecnologias, cargos, experiência) só o que ainda não está lá. Respostas únicas que você já deu não mudam. Nada é salvo antes de você revisar e clicar em Salvar perfil.</p>
+      <textarea id="import-text" rows="8" aria-label="Texto para importar" placeholder="Cole aqui o seu currículo ou qualquer texto sobre a sua carreira"></textarea>
+      <div class="import-actions">
+        <button class="btn primary" id="import-go" type="button"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg><span>Preencher com o Claude</span></button>
+        <span class="save-note" id="import-note" aria-live="polite"></span>
+      </div>
+    </details>
+
+    <div class="sender">
+      <form class="sender-sheet" id="profile-form" novalidate></form>
+      <aside class="sender-side">
+        <div class="gauge" id="gauge"></div>
+        <ul class="todo" id="todo"></ul>
+        <div class="save-bar">
+          <button class="btn primary" id="save-profile" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>Salvar perfil</span></button>
+          <p class="save-note" id="save-note" aria-live="polite"></p>
+        </div>
+      </aside>
+    </div>
+
+    <section class="sheet-box" id="curriculos" aria-labelledby="curriculos-title">
+      <h2 id="curriculos-title">Currículos</h2>
+      <p class="sheet-box-intro">Na etapa de currículo, o app vê o idioma da vaga e usa o arquivo desse idioma: seleciona se o LinkedIn já o tem, senão envia. Sem arquivo no idioma, fica o currículo que o LinkedIn já marcou. PDF, DOC ou DOCX de até 2 MB; <b>salva na hora</b>.</p>
+      <ul class="resumes" id="resumes"></ul>
+    </section>
+
+    <section class="sheet-box" id="filtros" aria-labelledby="filtros-title">
+      <h2 id="filtros-title">Filtros de vagas</h2>
+      <p class="sheet-box-intro">Vagas que o app pula antes de gastar uma chamada do Claude. Diferente do perfil acima, <b>salva sozinho</b> enquanto você digita; vale a partir da próxima execução.</p>
+      <form class="sieve-form" id="sieve-form">
+        <label class="field">
+          <span class="field-label">Empresas ignoradas</span>
+          <textarea name="companies" rows="4" placeholder="Uma por linha&#10;Acme&#10;Consultoria Exemplo" spellcheck="false"></textarea>
+          <small class="q-hint">Uma por linha. Pula toda empresa cujo nome contenha o texto, então prefira o nome inteiro.</small>
+        </label>
+        <label class="field">
+          <span class="field-label">Palavras que fazem pular a vaga</span>
+          <textarea name="words" rows="4" placeholder="Uma por linha&#10;estágio&#10;PHP&#10;presencial" spellcheck="false"></textarea>
+          <small class="q-hint">Uma por linha ou separadas por vírgula. Palavra inteira, no título ou na descrição; maiúsculas e acentos não importam.</small>
+        </label>
+        <div class="geo">
+          <label class="field">
+            <span class="field-label">País das vagas</span>
+            <input name="country" type="text" placeholder="Brasil" autocomplete="off">
+          </label>
+          <fieldset class="seg" aria-label="Regra para o país">
+            <label><input type="radio" name="countryMode" value="off" checked><span>Tanto faz</span></label>
+            <label><input type="radio" name="countryMode" value="prefer"><span>Priorizar</span></label>
+            <label><input type="radio" name="countryMode" value="only"><span>Só esse</span></label>
+          </fieldset>
+        </div>
+        <div class="geo">
+          <label class="field">
+            <span class="field-label">Idioma da vaga</span>
+            <input name="language" type="text" placeholder="Português" autocomplete="off">
+          </label>
+          <fieldset class="seg" aria-label="Regra para o idioma">
+            <label><input type="radio" name="languageMode" value="off" checked><span>Tanto faz</span></label>
+            <label><input type="radio" name="languageMode" value="prefer"><span>Priorizar</span></label>
+            <label><input type="radio" name="languageMode" value="only"><span>Só esse</span></label>
+          </fieldset>
+        </div>
+        <p class="q-hint geo-hint"><b>Priorizar</b>: essas vagas vão primeiro; as outras só entram se a lista acabar antes do Máximo (na Ultra, ficam atrás no ranking). <b>Só esse</b>: as outras são puladas. O Claude lê cada vaga para saber o país e o idioma, mesmo com a opção abaixo desligada.</p>
+        <label class="check sieve-claude">
+          <input name="useClaude" type="checkbox" checked>
+          <span>Claude decide se a vaga combina com o perfil<small>Desligado, só as listas e as regras de país e idioma filtram. A Ultra seleção sempre usa o Claude, porque precisa das notas.</small></span>
+        </label>
+        <label class="check sieve-claude">
+          <input id="no-ai" type="checkbox">
+          <span>Modo sem IA<small>Nada é enviado ao Claude. Pergunta nova vira aviso para você responder uma vez; as respostas salvas preenchem o resto. Sem notas, a Ultra seleção fica desligada.</small></span>
+        </label>
+        <p class="save-note" id="sieve-note"></p>
+      </form>
+    </section>
+
+    <section class="privacy" aria-labelledby="privacy-title">
+      <h2 id="privacy-title">Seus dados</h2>
+      <div class="privacy-body" id="privacy-body"></div>
+      <div class="privacy-erase">
+        <button class="btn" id="export-user" type="button"><span>Exportar perfil (.zip)</span></button>
+        <button class="btn" id="import-user" type="button"><span>Importar perfil (.zip)</span></button>
+        <button class="btn" id="erase" type="button" aria-expanded="false" aria-controls="erase-panel"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>Apagar este usuário…</span></button>
+        <div class="erase-panel" id="erase-panel" hidden>
+          <p id="erase-what"></p>
+          <label class="field">
+            <span class="field-label" id="erase-label"></span>
+            <input id="erase-name" type="text" autocomplete="off">
+          </label>
+          <div class="erase-actions">
+            <button class="btn primary" id="erase-go" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>Apagar para sempre</span></button>
+            <button class="btn" id="erase-cancel" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- PERGUNTAR -->
+  <section class="screen" id="perguntar" hidden>
+    <div class="screen-head">
+      <h1>Perguntar</h1>
+      <p id="ask-intro"></p>
+    </div>
+    <div class="ask">
+      <form class="ask-paste" id="ask-form">
+        <label class="field">
+          <span class="field-label">Perguntas</span>
+          <textarea id="ask-text" rows="14" spellcheck="false" placeholder="Cole aqui as perguntas, do jeito que vieram&#10;&#10;Quantos anos de experiência você tem com C#?&#10;Qual a sua pretensão salarial?&#10;Você tem disponibilidade para início imediato?"></textarea>
+        </label>
+        <div class="ask-actions">
+          <button class="btn primary" id="ask-go" type="submit" aria-describedby="ask-note"></button>
+          <small class="save-note" id="ask-note" aria-live="polite"></small>
+        </div>
+      </form>
+      <section class="ask-out" aria-labelledby="ask-out-title">
+        <div class="ask-msg" id="ask-msg" hidden>
+          <div class="ask-out-head">
+            <h2 id="ask-msg-title">Mensagem para responder</h2>
+            <button class="btn primary" id="ask-msg-copy" type="button"><span>Copiar mensagem</span></button>
+          </div>
+          <textarea id="ask-msg-text" class="ask-msg-text" rows="14" aria-labelledby="ask-msg-title"></textarea>
+          <p class="ask-flag" id="ask-msg-gaps" hidden></p>
+        </div>
+        <div class="ask-out-head">
+          <h2 id="ask-out-title">Respostas</h2>
+          <button class="btn" id="ask-copy-all" type="button" hidden><span>Copiar todas</span></button>
+        </div>
+        <ol class="ask-list" id="ask-list"></ol>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script src="i18n.js"></script>
+<script src="profile.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
