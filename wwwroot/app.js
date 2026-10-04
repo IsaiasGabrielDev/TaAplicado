@@ -205,8 +205,8 @@ function renderDispatch() {
   form.querySelectorAll('input').forEach(i => i.disabled = S.running);
   // Ultra ranks by Claude's score: nothing to rank without AI.
   const ultraPick = form.querySelector('[name="pick"][value="ultra"]');
-  // Ultra ranks by Claude's score, and only runs on LinkedIn for now.
-  ultraPick.disabled ||= S.noAi || pickMode() === 'indeed';
+  // Ultra ranks by Claude's score: nothing to rank without AI.
+  ultraPick.disabled ||= S.noAi;
   if (ultraPick.disabled && ultraPick.checked) form.pick.value = 'normal';
   syncTerms();
   go.disabled = S.stopping || (!S.running && (!setupReady() || S.reading)); // reading a profile holds the app's Chrome

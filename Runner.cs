@@ -169,7 +169,6 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             var page = ctx.Pages.FirstOrDefault() ?? await ctx.NewPageAsync();
             log(null, (o.DryRun ? "Execução em teste iniciada (nada é enviado)" : "Execução iniciada (envio de verdade)") + (answers.NoAi ? ", modo sem IA" : ""));
             var indeed = o.Mode == "indeed";
-            if (indeed && o.Ultra) log(null, "Ultra seleção ainda não funciona no Indeed: execução normal");
             // Each run works one site; "Só a fila" takes both, so it logs into whichever its jobs need.
             bool Mine(string id) => o.Mode == "queue" || Indeed.Is(id) == indeed;
             List<string> queued;
@@ -212,7 +211,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             if (!indeed && filters.CountryRule is { } only && filters.CountryMode == "only")
                 listUrl += $"location={Uri.EscapeDataString(only)}&";
 
-            if (o.Ultra && !indeed) done += await UltraAsync(ctx, page, listUrl, o, done, filters, ct);
+            if (o.Ultra) done += await UltraAsync(ctx, page, listUrl, o, done, filters, ct);
             else
             {
                 var later = new List<string>(); // outside the country/language priority: only if the list runs out first
@@ -282,14 +281,18 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
                     CurrentJob = id; changed();
                     var trail = new List<LogLine>();
                     void Log(string m) { trail.Add(new(id, m, DateTime.Now)); log(id, m); }
-                    var (status, job, score, preferred) = await EasyApply.VetAsync(page, id, answers, filters, true, Log);
+                    var (status, job, score, preferred) = Indeed.Is(id)
+                        ? await Indeed.VetAsync(page, id, answers, filters, true, Log, Attend, ct)
+                        : await EasyApply.VetAsync(page, id, answers, filters, true, Log);
                     if (score is { } n) _scores[id] = n;
                     // A contender's form is answered right away (a test pass, nothing sent), while Claude still has quota:
                     // the answers land in the cache, so applying later needs no Claude at all.
                     if (status == "" && score >= o.MinScore)
                     {
                         Log("Preparando as respostas do formulário");
-                        (status, _, _) = await EasyApply.RunAsync(page, id, answers, null, true, Log, []);
+                        (status, _, _) = Indeed.Is(id)
+                            ? await Indeed.RunAsync(page, id, answers, null, true, Log, [], Attend, ct)
+                            : await EasyApply.RunAsync(page, id, answers, null, true, Log, []);
                         if (status == "dry-run") status = "";
                     }
                     if (status == "") { pool.Add((id, job, score ?? 0, preferred)); Log(score >= o.MinScore ? $"Na disputa: nota {score}, respostas prontas" : $"Fora da disputa: nota {score}"); }

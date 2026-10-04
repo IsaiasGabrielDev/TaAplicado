@@ -94,18 +94,28 @@ public static class Indeed
 
     static ILocator ApplyButton(IPage page) => page.Locator("[data-testid=viewjob-indeed-apply]");
 
+    /// Same contract as EasyApply.VetAsync: ignored companies/words, the easy-apply button, then Claude.
+    public static async Task<(string Status, string Job, int? Score, bool Preferred)> VetAsync(IPage page, string id, Answers answers, Filters filters,
+        bool score, Action<string> log, Action<string?> attention, CancellationToken ct)
+    {
+        var (job, description) = await OpenAsync(page, id, attention, log, ct);
+        if (filters.Blocked(job, description) is { } blocked) return ($"skip: blocked: {blocked}", job, null, false);
+        if (!await ApplyButton(page).First.IsVisibleAsync()) return ("skip: no easy apply", job, null, false);
+        var (status, s, preferred) = await EasyApply.JudgeAsync(job, description, answers, filters, score, log);
+        return (status, job, s, preferred);
+    }
+
     /// Same contract as EasyApply.RunAsync. filters null = already vetted.
     public static async Task<(string Status, string Job, int? Score)> RunAsync(IPage page, string id, Answers answers, Filters? filters, bool dryRun,
         Action<string> log, List<string[]> sent, Action<string?> attention, CancellationToken ct, bool canDefer = false)
     {
-        var (job, description) = await OpenAsync(page, id, attention, log, ct);
+        string job;
         int? score = null;
-        if (filters is not null)
+        if (filters is null) job = (await OpenAsync(page, id, attention, log, ct)).Job;
+        else
         {
-            if (filters.Blocked(job, description) is { } blocked) return ($"skip: blocked: {blocked}", job, null);
-            if (!await ApplyButton(page).First.IsVisibleAsync()) return ("skip: no easy apply", job, null);
             string status; bool preferred;
-            (status, score, preferred) = await EasyApply.JudgeAsync(job, description, answers, filters, false, log);
+            (status, job, score, preferred) = await VetAsync(page, id, answers, filters, false, log, attention, ct);
             if (status != "") return (status, job, score);
             if (canDefer && !preferred) return ("defer", job, score);
         }
