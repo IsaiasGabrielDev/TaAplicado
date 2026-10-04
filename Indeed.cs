@@ -220,20 +220,26 @@ public static class Indeed
 
     // One field per question still needing an answer (.ia-Questions-item, or a bare *-select-question fieldset as in the demographic step): required and empty, or showing an error.
     const string ExtractJs = "() => {" + EasyApply.CleanJs + """
-          const star = t => /\*\s*$/.test(t || ''), bare = t => clean(t).replace(/\s*\*\s*$/, '');
+          const star = t => /\*\s*(obrigatório|required)?\s*$/i.test(t || ''), bare = t => clean(t).replace(/\s*\*\s*(obrigatório|required)?\s*$/i, '');
           let n = 0; const out = [];
           document.querySelectorAll('[data-lia]').forEach(el => el.removeAttribute('data-lia'));
           document.querySelectorAll('.ia-Questions-item, [data-testid$=-select-question]').forEach(item => {
             if (item.parentElement.closest('.ia-Questions-item')) return;
             const err = clean(item.querySelector('[role=alert], [id*=error i], [class*=rror]')?.innerText) || null;
             const raw = item.querySelector('[data-testid$=-question-label]')?.innerText || item.querySelector('legend')?.innerText || item.querySelector('label')?.innerText || '';
-            const tag = (type, options, value, max) => { const id = 'f' + n++; item.setAttribute('data-lia', id);
-              out.push({ id, label: bare(raw), type, options, value, error: err, combo: false, max }); };
+            const tag = (type, options, value, max, combo = false) => { const id = 'f' + n++; item.setAttribute('data-lia', id);
+              out.push({ id, label: bare(raw), type, options, value, error: err, combo, max }); };
             const radios = [...item.querySelectorAll('input[type=radio]')], checks = [...item.querySelectorAll('input[type=checkbox]')];
             const inputs = radios.length ? radios : checks;
             const req = star(raw) || !!item.querySelector('[data-testid$=-label-asterisk]') || [...item.querySelectorAll('input, select, textarea')].some(i => i.required);
             if (!req && !err) return;
             if (inputs.length) { if (!inputs.some(i => i.checked) || err) tag(radios.length ? 'radio' : 'checkbox', inputs.map(optText), '', null); return; }
+            // Indeed's own single select (País): a [role=combobox] button over a searchable [role=option] list.
+            const box = item.querySelector('[role=combobox]');
+            if (box && item.querySelector('[role=option]')) {
+              if (/selecione|select an option/i.test(box.innerText) || err) tag('select', [...item.querySelectorAll('[role=option]')].map(o => clean(o.innerText)), '', null, true);
+              return;
+            }
             const sel = item.querySelector('select');
             if (sel) { if (!sel.value || err) tag('select', [...sel.options].filter(o => o.value).map(o => clean(o.text)), '', null); return; }
             const t = item.querySelector('textarea, input:not([type=hidden]):not([type=file])');
@@ -255,6 +261,14 @@ public static class Indeed
             {
                 switch (f.Type)
                 {
+                    case "select" when f.Combo:
+                        var want = Answers.Best(ans, f.Options) ?? ans;
+                        await item.Locator("[role=combobox]").ClickAsync(new() { Timeout = 5000 });
+                        var search = item.Locator("[role=dialog] input").First;
+                        if (await search.IsVisibleAsync()) await search.FillAsync(want.Split(" (")[0]); // "Brasil (BR)" → "Brasil"
+                        await form.WaitForTimeoutAsync(600);
+                        await item.Locator("[role=option]").Filter(new() { HasText = want }).First.ClickAsync(new() { Timeout = 5000 });
+                        break;
                     case "select": await item.Locator("select").SelectOptionAsync(new SelectOptionValue { Label = Answers.Best(ans, f.Options) ?? ans }); break;
                     // ponytail: a multi-select gets one option, Claude's best; several would need a list answer.
                     case "radio" or "checkbox": await item.EvaluateAsync(EasyApply.PickJs, Answers.Best(ans, f.Options) ?? ans); break;
