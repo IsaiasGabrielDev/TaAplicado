@@ -85,7 +85,8 @@ public static class Indeed
         var t = await page.EvaluateAsync<string[]>("""
             () => [document.querySelector('[data-testid=vj-job-title]')?.innerText.trim() || document.title.split(' - ')[0],
                    document.querySelector('[data-testid=company-info-metadata]')?.innerText.split('\n')[0].trim() || '',
-                   document.querySelector('[data-testid=vj-job-description-heading]')?.parentElement?.innerText || document.body.innerText]
+                   // the whole job content: "Dados da vaga" (pay, location) sits outside the description block
+                   document.querySelector('[data-testid=viewjob-job-content]')?.innerText || document.body.innerText]
             """);
         var job = t[1] == "" ? t[0] : $"{t[0]} | {t[1]}";
         log($"Vaga aberta: {job}");
