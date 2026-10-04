@@ -121,7 +121,8 @@ public static class Indeed
             if (canDefer && !preferred) return ("defer", job, score);
         }
         if (!await ApplyButton(page).First.IsVisibleAsync()) return ("skip: no easy apply", job, score); // e.g. already applied
-        // ponytail: keeps the resume already on the Indeed account; per-language upload (as on LinkedIn) when asked.
+        // The Indeed account's resume is kept; this one only goes in when a question asks for the file ("Anexar o currículo *").
+        var resume = EasyApply.ResumeOf(EasyApply.Lang(await page.Locator("body").InnerTextAsync())) ?? EasyApply.ResumeOf("pt") ?? EasyApply.ResumeOf("en");
 
         // On the job page the link opens in the same tab; from a search card it opens a new one. Take whichever has the form.
         var pages = page.Context.Pages.Count;
@@ -151,6 +152,15 @@ public static class Indeed
                     return ("applied", job, score);
                 }
 
+                if (await form.EvaluateAsync<bool>(TagFileJs))
+                {
+                    if (resume is null) { await EasyApply.DumpAsync(form, id); return ("failed: a vaga pede o currículo como arquivo; adicione em Perfil → Currículos", job, score); }
+                    await form.Locator("[data-lia-file]").SetInputFilesAsync(Path.GetFullPath(resume));
+                    await form.WaitForTimeoutAsync(3000);
+                    log($"Currículo anexado: {Path.GetFileName(resume)}");
+                    sent.Add(["Currículo", Path.GetFileName(resume)]);
+                }
+
                 // Questions come in questions-module and also in other steps (the demographic one has a required consent).
                 {
                     var fields = JsonSerializer.Deserialize<List<Field>>(await form.EvaluateAsync<string>(ExtractJs), Store.Json)!;
@@ -158,7 +168,7 @@ public static class Indeed
                     {
                         var resolved = await answers.ResolveAsync(id, job, fields, log);
                         if (resolved is null) return ("waiting", job, score);
-                        await FillAsync(form, fields, resolved, log, sent);
+                        await FillAsync(form, id, fields, resolved, log, sent);
                     }
                 }
 
@@ -182,6 +192,19 @@ public static class Indeed
             if (form != page) await form.CloseAsync();
         }
     }
+
+    // A required question asking for a file with none attached yet: tags its file input. False when there is none.
+    const string TagFileJs = """
+        () => {
+          document.querySelectorAll('[data-lia-file]').forEach(i => i.removeAttribute('data-lia-file'));
+          const item = [...document.querySelectorAll('.ia-Questions-item')].find(it => it.querySelector('input[type=file]')
+            && (/\*\s*$/m.test(it.innerText) || it.querySelector('[data-testid$=-label-asterisk]') || /carregue um arquivo|upload a file/i.test(it.innerText))
+            && ![...it.querySelectorAll('*')].some(e => e.children.length === 0 && /\S\.(pdf|docx?|rtf|txt|odt)\s*$/i.test(e.textContent)));
+          if (!item) return false;
+          item.querySelector('input[type=file]').setAttribute('data-lia-file', '');
+          return true;
+        }
+        """;
 
     const string TagNextJs = """
         () => {
@@ -221,7 +244,7 @@ public static class Indeed
         }
         """;
 
-    static async Task FillAsync(IPage form, List<Field> fields, Dictionary<string, string> answers, Action<string> log, List<string[]> sent)
+    static async Task FillAsync(IPage form, string id, List<Field> fields, Dictionary<string, string> answers, Action<string> log, List<string[]> sent)
     {
         foreach (var f in fields)
         {
@@ -235,7 +258,19 @@ public static class Indeed
                     case "select": await item.Locator("select").SelectOptionAsync(new SelectOptionValue { Label = Answers.Best(ans, f.Options) ?? ans }); break;
                     // ponytail: a multi-select gets one option, Claude's best; several would need a list answer.
                     case "radio" or "checkbox": await item.EvaluateAsync(EasyApply.PickJs, Answers.Best(ans, f.Options) ?? ans); break;
-                    default: await item.Locator("textarea, input:not([type=hidden]):not([type=file])").First.FillAsync(ans); break;
+                    default:
+                        var input = item.Locator("textarea, input:not([type=hidden]):not([type=file])").First;
+                        try { await input.FillAsync(ans, new() { Timeout = 5000 }); }
+                        catch (TimeoutException)
+                        {
+                            // A searchable list (country, city) that refuses plain typing: type it, then pick the matching option.
+                            await input.ClickAsync(new() { Timeout = 5000 });
+                            await input.PressSequentiallyAsync(ans, new() { Delay = 60, Timeout = 10_000 });
+                            await form.WaitForTimeoutAsync(1200);
+                            var match = form.Locator("[role=option]").Filter(new() { HasText = ans }).First;
+                            await (await match.CountAsync() > 0 ? match : form.Locator("[role=option]").First).ClickAsync(new() { Timeout = 5000 });
+                        }
+                        break;
                 }
                 log($"{f.Label} = {ans}");
                 sent.Add([f.Label, ans]);
@@ -243,6 +278,7 @@ public static class Indeed
             catch (Exception e) when (e is PlaywrightException or TimeoutException)
             {
                 log($"Falhou ao preencher {f.Label}: {e.Message.Split('\n')[0]}");
+                await EasyApply.DumpAsync(form, $"{id}-campo"); // the field's real markup, to fix the selector
             }
         }
     }
