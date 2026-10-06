@@ -36,7 +36,18 @@ public static class EasyApply
     public static async Task<(string Status, string Job, int? Score, bool Preferred)> VetAsync(IPage page, string jobId, Answers answers, Filters filters, bool score, Action<string> log)
     {
         var job = await OpenAsync(page, jobId, log);
-        var description = await page.Locator("main").First.InnerTextAsync();
+        // Top card (location, pay, remote/hybrid) + "About the job" + "About the company": the rest of main is
+        // Premium ads, similar jobs, people and the footer. Whole main when LinkedIn's layout changes.
+        var description = await page.EvaluateAsync<string>("""
+            () => {
+              const about = document.querySelector('main [componentkey^=JobDetails_AboutTheJob]');
+              const col = about?.closest('[data-testid=lazy-column]');
+              if (!col) return document.querySelector('main')?.innerText || '';
+              const top = [...col.children].find(c => c.innerText.trim());
+              const company = document.querySelector('main [componentkey^=JobDetails_AboutTheCompany]');
+              return [top, about, company].map(e => e?.innerText || '').join('\n\n');
+            }
+            """);
         if (filters.Blocked(job, description) is { } blocked) return ($"skip: blocked: {blocked}", job, null, false);
         if (!await ApplyButton(page).First.IsVisibleAsync()) { await DumpAsync(page, jobId); return ("skip: no easy apply", job, null, false); }
         var (status, s, preferred) = await JudgeAsync(job, description, answers, filters, score, log);

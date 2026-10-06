@@ -22,7 +22,8 @@ public record Relevance(bool Relevant, int Score, string Why, bool? InCountry, b
 public class ClaudeUnavailableException(string detail) : Exception($"Claude indisponível: {detail}");
 
 /// Resolves form fields: answers.json cache → Claude → an aviso for the user (when Claude isn't confident).
-public class Answers(IClaudeAgentService claude)
+/// claude answers forms and pasted questions (ai/answer.md); judge checks relevance (ai/judge.md, no saved answers).
+public class Answers(IClaudeAgentService claude, IClaudeAgentService judge)
 {
     public Dictionary<string, Cached> Cache { get; } = Store.Load<Dictionary<string, Cached>>("answers.json");
     public List<Aviso> Avisos { get; } = Store.Load<List<Aviso>>("avisos.json");
@@ -41,7 +42,9 @@ public class Answers(IClaudeAgentService claude)
         {
             // A field with an error was already rejected, so the cache is wrong for this case.
             // An unlabeled field has no question to match: it would reuse whatever answer an empty label once got.
-            if (f.Error is null && Key(f.Label) != "" && Cache.TryGetValue(Key(f.Label), out var cached))
+            // A choice field skips a saved answer that matches none of its options (the same question once came as free text).
+            if (f.Error is null && Key(f.Label) != "" && Cache.TryGetValue(Key(f.Label), out var cached)
+                && (f.Options.Length == 0 || Best(cached.Answer, f.Options) is not null))
                 result[f.Id] = cached.Answer;
             else
                 pending.Add(f);
@@ -119,7 +122,8 @@ public class Answers(IClaudeAgentService claude)
     /// country / language: also ask whether the job is in that country and written in that language (null = don't ask).
     public async Task<Relevance> IsRelevantAsync(string job, string description, string? country = null, string? language = null)
     {
-        var text = description.Length > 6000 ? description[..6000] : description;
+        var text = Regex.Replace(description, @"\s+", " ").Trim();
+        if (text.Length > 6000) text = text[..6000];
         var shape = """{"relevant":true,"score":80,"reason":"<short reason>" """.TrimEnd();
         var asks = new List<string>();
         if (country is not null)
@@ -132,8 +136,8 @@ public class Answers(IClaudeAgentService claude)
             shape += ""","inLanguage":true""";
             asks.Add($"- \"inLanguage\": true if the job description is written mainly in {language}; false otherwise.");
         }
-        var r = await claude.RunPromptAsync($$"""
-            Relevance check (see "Relevance check" in CLAUDE.md).
+        var r = await judge.RunPromptAsync($$"""
+            Relevance check (see "Relevance check").
             Job: {{job}}
 
             Job page text:
@@ -200,16 +204,36 @@ public class Answers(IClaudeAgentService claude)
         if (Avisos.RemoveAll(v => v.JobId == jobId) > 0) Store.Save("avisos.json", Avisos);
     }
 
-    /// Saves the cache, plus the Markdown copy agent/CLAUDE.md imports (@saved-answers.md) so Claude reads the saved
-    /// answers on every call. Only what the person typed or approved: an unreviewed guess must not feed back into Claude.
-    /// Markdown, not JSON: the same 127 answers are ~28% smaller, and the file goes along with every call.
-    /// It lives in agent/ because Claude Code skips imports from outside the project folder in non-interactive mode.
+    /// Saves the cache and rebuilds the system prompts, since ai/answer.md carries the saved answers.
+    /// Only what the person typed or approved goes there: an unreviewed guess must not feed back into Claude.
     public void SaveCache()
     {
         Store.Save("answers.json", Cache);
+        WritePrompts();
+    }
+
+    /// The two system prompts every Claude call runs with (--system-prompt-file), instead of Claude Code's own
+    /// coding prompt: built from agent/CLAUDE.md (rules + profile) and the saved answers. ai/ has no CLAUDE.md.
+    public void WritePrompts()
+    {
+        var (j, a) = Prompts(File.Exists("agent/CLAUDE.md") ? File.ReadAllText("agent/CLAUDE.md") : "", SavedAnswersMd(Cache.Values));
+        Directory.CreateDirectory("ai");
         // Write then swap: a Claude call starting meanwhile reads the old file whole, never a half-written one.
-        File.WriteAllText("agent/saved-answers.md.tmp", SavedAnswersMd(Cache.Values));
-        File.Move("agent/saved-answers.md.tmp", "agent/saved-answers.md", true);
+        foreach (var (file, text) in new[] { ("ai/judge.md", j), ("ai/answer.md", a) })
+        {
+            File.WriteAllText(file + ".tmp", text);
+            File.Move(file + ".tmp", file, true);
+        }
+    }
+
+    /// judge: relevance rules + profile. answer: form rules + profile + saved answers, last so a new answer
+    /// only changes the end of the prompt (the rest stays in Claude's prompt cache).
+    internal static (string Judge, string Answer) Prompts(string md, string saved)
+    {
+        int sa = md.IndexOf("## Saved answers", StringComparison.Ordinal), rc = md.IndexOf("## Relevance check", StringComparison.Ordinal),
+            cp = md.IndexOf("## Candidate profile", StringComparison.Ordinal);
+        if (sa < 0 || rc < sa || cp < rc) return (md, md.Replace("@saved-answers.md", saved)); // unexpected layout: everything to both
+        return (md[rc..], md[..sa] + md[cp..].TrimEnd() + "\n\n" + md[sa..rc].Replace("@saved-answers.md", saved));
     }
 
     internal static string SavedAnswersMd(IEnumerable<Cached> cache) =>
@@ -226,7 +250,7 @@ public class Answers(IClaudeAgentService claude)
     static string Prompt(string job, List<Field> fields) => $$"""
         Job: {{job}}
 
-        Answer the Easy Apply form fields below following the rules in CLAUDE.md.
+        Answer the Easy Apply form fields below following your rules.
         Fields:
         {{JsonSerializer.Serialize(fields.Select(f => new { f.Id, f.Label, f.Type, f.Options, previous = f.Value, f.Error, maxLength = f.Max }))}}
 
@@ -267,12 +291,13 @@ public class Answers(IClaudeAgentService claude)
         Directory.SetCurrentDirectory(tmp);
         try
         {
-            var offline = new Answers(null!) { NoAi = true };
+            var offline = new Answers(null!, null!) { NoAi = true };
             offline.Cache[Key("Anos de C#?")] = new("Anos de C#?", "5", "você", true);
             Field F(string id, string label) => new(id, label, "text", [], "", null, false);
             Trace.Assert(offline.ResolveAsync("1", "Dev | X", [F("f0", "Anos de C#?")], _ => { }).GetAwaiter().GetResult() is { } ok && ok["f0"] == "5");
+            Trace.Assert(offline.ResolveAsync("2", "Dev | Y", [new("f0", "Anos de C#?", "select", ["1-2", "3-4"], "", null, false)], _ => { }).GetAwaiter().GetResult() is null);
             Trace.Assert(offline.ResolveAsync("1", "Dev | X", [F("f0", "Anos de C#?"), F("f1", "Pretensão?")], _ => { }).GetAwaiter().GetResult() is null);
-            Trace.Assert(offline.Avisos is [{ Label: "Pretensão?", JobId: "1" }]);
+            Trace.Assert(offline.Avisos is [{ Label: "Anos de C#?", JobId: "2" }, { Label: "Pretensão?", JobId: "1" }]);
             Trace.Assert(offline.Lookup("1. Anos de C#?\r\n\n- Pretensão?") is [{ Question: "Anos de C#?", Answer: "5", Confident: true }, { Question: "Pretensão?", Answer: "", Confident: false }]);
         }
         finally { Directory.SetCurrentDirectory(home); Directory.Delete(tmp, true); }
@@ -288,6 +313,9 @@ public class Answers(IClaudeAgentService claude)
         Trace.Assert(Plural(1, "vaga", "vagas") == "1 vaga" && Plural(0, "vaga", "vagas") == "0 vagas");
         var md = SavedAnswersMd([new("Inglês?", "B1", "você"), new("Anos de Go?", "0", "Claude"), new("Anos\r\nde C#?", "5", "Claude", true), new(" ", "Autorizo", "você")]);
         Trace.Assert(md == "# Respostas salvas\n\n- Anos de C#?: 5\n- Inglês?: B1\n"); // unreviewed and label-less left out, one line each
+        var (judge, answer) = Prompts("# A\nform\n## Saved answers\nuse:\n@saved-answers.md\n## Relevance check\nfit\n## Candidate profile\n- X\n", "- Q: R\n");
+        Trace.Assert(judge == "## Relevance check\nfit\n## Candidate profile\n- X\n");
+        Trace.Assert(answer == "# A\nform\n## Candidate profile\n- X\n\n## Saved answers\nuse:\n- Q: R\n\n");
     }
 }
 

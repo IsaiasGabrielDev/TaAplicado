@@ -135,6 +135,9 @@ public static class Indeed
             for (int step = 0; step < 15; step++)
             {
                 await WaitHumanAsync(form, attention, ct);
+                // A step loads behind a spinner; reading it early finds no fields and no "Continuar".
+                try { await form.WaitForFunctionAsync("() => !document.querySelector('main [id^=ifl-Spinner-title]')", null, new() { Timeout = 20_000 }); }
+                catch (TimeoutException) { } // still loading: the step below fails it with a dump
                 if (form.Url.Contains("secure.indeed.com")) { await EnsureLoggedInAsync(form, attention, log, ct); return ("failed: login pedido no meio da candidatura", job, score); }
                 var path = new Uri(form.Url).AbsolutePath;
                 if (path.Contains("/post-apply")) { log("Candidatura enviada"); return ("applied", job, score); }
@@ -234,10 +237,10 @@ public static class Indeed
             const req = star(raw) || !!item.querySelector('[data-testid$=-label-asterisk]') || [...item.querySelectorAll('input, select, textarea')].some(i => i.required);
             if (!req && !err) return;
             if (inputs.length) { if (!inputs.some(i => i.checked) || err) tag(radios.length ? 'radio' : 'checkbox', inputs.map(optText), '', null); return; }
-            // Indeed's own single select (País): a [role=combobox] button over a searchable [role=option] list.
-            const box = item.querySelector('[role=combobox]');
-            if (box && item.querySelector('[role=option]')) {
-              if (/selecione|select an option/i.test(box.innerText) || err) tag('select', [...item.querySelectorAll('[role=option]')].map(o => clean(o.innerText)), '', null, true);
+            // Indeed's own select (País): a [role=combobox] button over a searchable list; multi-selects use menuitemcheckbox.
+            const box = item.querySelector('[role=combobox]'), opt = '[role=option], [role=menuitemcheckbox]';
+            if (box && item.querySelector(opt)) {
+              if (/selecione|select an option/i.test(box.innerText) || err) tag('select', [...item.querySelectorAll(opt)].map(o => clean(o.innerText)), '', null, true);
               return;
             }
             const sel = item.querySelector('select');
@@ -267,7 +270,9 @@ public static class Indeed
                         var search = item.Locator("[role=dialog] input").First;
                         if (await search.IsVisibleAsync()) await search.FillAsync(want.Split(" (")[0]); // "Brasil (BR)" → "Brasil"
                         await form.WaitForTimeoutAsync(600);
-                        await item.Locator("[role=option]").Filter(new() { HasText = want }).First.ClickAsync(new() { Timeout = 5000 });
+                        await item.Locator("[role=option], [role=menuitemcheckbox]").Filter(new() { HasText = want }).First.ClickAsync(new() { Timeout = 5000 });
+                        // a multi-select keeps its list open over the next questions
+                        if (await item.Locator("[role=combobox][aria-expanded=true]").CountAsync() > 0) await form.Keyboard.PressAsync("Escape");
                         break;
                     case "select": await item.Locator("select").SelectOptionAsync(new SelectOptionValue { Label = Answers.Best(ans, f.Options) ?? ans }); break;
                     // ponytail: a multi-select gets one option, Claude's best; several would need a list answer.

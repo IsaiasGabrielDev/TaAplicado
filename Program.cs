@@ -15,10 +15,10 @@ static class Program
 {
     const string ProfileMarker = "## Candidate profile";
 
-    // Every Claude call sees only this remetente's CLAUDE.md and the prompt: no user-level settings, hooks, skills
-    // or MCP servers, no saved transcript, and no tools (so nothing outside the prompt can be read or written).
-    const string Isolation = "--setting-sources project --disable-slash-commands --no-session-persistence --strict-mcp-config "
-        + "--disallowed-tools Read Write Edit Glob Grep WebFetch WebSearch Bash PowerShell NotebookEdit Agent";
+    // Every Claude call sees only its system prompt file (ai/judge.md or ai/answer.md) and the prompt: no Claude Code
+    // coding prompt, user-level settings, hooks, skills or MCP servers, no saved transcript, and no tools at all
+    // (so nothing outside the prompt can be read or written, and no tool definitions are sent).
+    const string Isolation = "--setting-sources project --disable-slash-commands --no-session-persistence --strict-mcp-config --tools \"\"";
     static readonly List<LogLine> Log = [];
 
     [STAThread]
@@ -36,7 +36,7 @@ static class Program
         if (Users.List().Count == 0) Users.Current = Users.Create("Principal");
         if (!Users.Exists(Users.Current)) Users.Current = Users.List()[0].Id;
 
-        IClaudeAgentService claude = null!;
+        IClaudeAgentService claude = null!, judge = null!;
         Answers answers = null!;
         Runner runner = null!;
         var settings = new Dictionary<string, bool>();
@@ -97,7 +97,7 @@ static class Program
             RefreshPath(); // an install from the setup steps changed PATH after this process started
             _ = Task.Run(async () =>
             {
-                var r = await claude.RunPromptAsync("Return ONLY this JSON, nothing else: {\"ok\":true}");
+                var r = await judge.RunPromptAsync("Return ONLY this JSON, nothing else: {\"ok\":true}");
                 claudeOk = r.Success && r.Content.Contains("\"ok\"");
                 Push();
             });
@@ -115,18 +115,21 @@ static class Program
             var saved = File.Exists("agent/CLAUDE.md") ? SplitProfile(File.ReadAllText("agent/CLAUDE.md")).Profile : "";
             File.WriteAllText("agent/CLAUDE.md", rules.TrimEnd() + "\n\n" + ProfileMarker + "\n" + saved + "\n");
 
-            claude = new ServiceCollection()
+            IClaudeAgentService Bridge(string prompt) => new ServiceCollection()
                 .AddClaudeCodeBridge(o =>
                 {
-                    o.ProjectDirectory = Path.GetFullPath("agent");
+                    o.ProjectDirectory = Path.GetFullPath("ai");
                     o.MaxTurns = 3;
                     o.Timeout = TimeSpan.FromMinutes(2);
-                    o.ExtraArguments = Isolation;
+                    o.ExtraArguments = $"{Isolation} --system-prompt-file \"{Path.GetFullPath(prompt)}\"";
                 })
                 .BuildServiceProvider()
                 .GetRequiredService<IClaudeAgentService>();
-            answers = new Answers(claude);
-            answers.SaveCache(); // writes agent/saved-answers.md for users whose answers predate it
+            claude = Bridge("ai/answer.md");
+            judge = Bridge("ai/judge.md");
+            answers = new Answers(claude, judge);
+            answers.WritePrompts();
+            File.Delete("agent/saved-answers.md"); // older versions imported it from CLAUDE.md; ai/answer.md carries it now
             runner = new Runner(answers, AddLog, Push);
             settings = Store.Load<Dictionary<string, bool>>("settings.json");
             answers.NoAi = settings.GetValueOrDefault("noAi");
@@ -269,7 +272,7 @@ static class Program
                     var fields = m.GetProperty("fields").GetRawText();
                     _ = Task.Run(async () =>
                     {
-                        var reply = await ImportProfileAsync(claude, text, fields, answers.English);
+                        var reply = await ImportProfileAsync(judge, text, fields, answers.English);
                         // Tagged with its remetente: the page drops it if someone else is active by now.
                         window.SendWebMessage(JsonSerializer.Serialize(new { reply, user = forUser }, Store.Json));
                     });
@@ -290,7 +293,7 @@ static class Program
                                 // Generous: the user may have to log in to LinkedIn in the Chrome window first.
                                 using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(5));
                                 var page = await reader.ReadProfileAsync(url, limit.Token);
-                                reply = await ImportProfileAsync(claude, $"LinkedIn: {url}" + Environment.NewLine + page, askFields, answers.English);
+                                reply = await ImportProfileAsync(judge, $"LinkedIn: {url}" + Environment.NewLine + page, askFields, answers.English);
                             }
                             catch (InvalidOperationException e) { reply = new { type = "importResult", error = e.Message }; }
                             catch (OperationCanceledException) { reply = new { type = "importResult", error = "A leitura do perfil foi interrompida (Chrome fechado ou demorou demais). Tente de novo." }; }
@@ -351,7 +354,7 @@ static class Program
                     if (suggesting || answers.NoAi) return;
                     suggesting = true;
                     var askedFor = Users.Current;
-                    var asker = claude;
+                    var asker = judge;
                     _ = Task.Run(async () =>
                     {
                         try
@@ -409,6 +412,7 @@ static class Program
                     // The page renders the markdown (wwwroot/profile.js) so the questionnaire lives in one place.
                     File.WriteAllText("agent/profile.json", m.GetProperty("values").GetRawText());
                     WriteProfile(S("markdown"));
+                    answers.WritePrompts();
                     break;
                 case "openJob":
                     if (Regex.IsMatch(S("id"), @"^(\d+|indeed-[0-9a-f]+)$"))
@@ -472,7 +476,7 @@ static class Program
     static async Task<object> ImportProfileAsync(IClaudeAgentService claude, string text, string fieldsJson, bool english)
     {
         var r = await claude.RunPromptAsync($$"""
-            Profile import. Ignore the form-answering and relevance rules in CLAUDE.md for this task.
+            Profile import. Ignore the relevance rules for this task.
             Read the candidate's text below and answer the questionnaire fields.
 
             Fields (id, label, type, options):
@@ -505,11 +509,11 @@ static class Program
         }
     }
 
-    /// LinkedIn search terms that fit the candidate profile (in CLAUDE.md). Null when Claude gives no usable list.
+    /// LinkedIn search terms that fit the candidate profile. Null when Claude gives no usable list.
     static async Task<List<string>?> SuggestSearchesAsync(IClaudeAgentService claude)
     {
         var r = await claude.RunPromptAsync("""
-            Search suggestions. Ignore the form-answering and relevance rules in CLAUDE.md for this task.
+            Search suggestions. Ignore the relevance rules for this task.
             From the candidate profile, suggest 8 LinkedIn job search queries this candidate should run.
             - Each one short (2 to 5 words), written like real job titles recruiters post, e.g. "desenvolvedor .net sênior".
             - Cover the candidate's main stack and seniority first, then close variations (other titles, related roles
@@ -535,7 +539,7 @@ static class Program
     {
         var r = await claude.RunPromptAsync($$"""
             Pasted questions. The candidate copied the text below from a job form or a recruiter's message and wants
-            each question answered in their name, following the answering rules in CLAUDE.md (facts only, first person,
+            each question answered in their name, following your answering rules (facts only, first person,
             in the language of the question, confident:false when the profile and saved answers do not settle it).
             - Find every question in the text, in order; drop numbering and form noise. A sub-item (a, b, c…) is its own
               question, written whole with its parent's context (e.g. "Quanto tempo de experiência em C#?").
