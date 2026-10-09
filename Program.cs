@@ -18,7 +18,8 @@ static class Program
     // Every Claude call sees only its system prompt file (ai/judge.md or ai/answer.md) and the prompt: no Claude Code
     // coding prompt, user-level settings, hooks, skills or MCP servers, no saved transcript, and no tools at all
     // (so nothing outside the prompt can be read or written, and no tool definitions are sent).
-    const string Isolation = "--setting-sources project --disable-slash-commands --no-session-persistence --strict-mcp-config --tools \"\"";
+    const string Isolation = "--setting-sources project --disable-slash-commands --no-session-persistence --strict-mcp-config --tools=";
+    // No quotes anywhere: the bridge runs claude through cmd, and any '"' in the arguments breaks the command line.
     static readonly List<LogLine> Log = [];
 
     [STAThread]
@@ -121,12 +122,12 @@ static class Program
                     o.ProjectDirectory = Path.GetFullPath("ai");
                     o.MaxTurns = 3;
                     o.Timeout = TimeSpan.FromMinutes(2);
-                    o.ExtraArguments = $"{Isolation} --system-prompt-file \"{Path.GetFullPath(prompt)}\"";
+                    o.ExtraArguments = $"{Isolation} --system-prompt-file {prompt}"; // relative to ai/, the working directory
                 })
                 .BuildServiceProvider()
                 .GetRequiredService<IClaudeAgentService>();
-            claude = Bridge("ai/answer.md");
-            judge = Bridge("ai/judge.md");
+            claude = Bridge("answer.md");
+            judge = Bridge("judge.md");
             answers = new Answers(claude, judge);
             answers.WritePrompts();
             File.Delete("agent/saved-answers.md"); // older versions imported it from CLAUDE.md; ai/answer.md carries it now

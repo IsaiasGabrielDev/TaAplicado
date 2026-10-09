@@ -88,7 +88,8 @@ public static class EasyApply
         var apply = ApplyButton(page);
         if (!await apply.First.IsVisibleAsync()) return ("skip: no easy apply", job, score);
         // The job's language picks the resume (read now: the modal covers the description).
-        var lang = Lang(await page.Locator("#job-details, .jobs-description__content, main").First.InnerTextAsync());
+        // Only the description: the rest of main is LinkedIn's own UI, in whatever language the account uses.
+        var lang = Lang(await FirstTextAsync(page, "main [componentkey^=JobDetails_AboutTheJob]", "#job-details", ".jobs-description__content", "main"));
         var resume = ResumeOf(lang);
 
         // Only Easy Apply jobs count toward the mapping quota; skipped ones must not use it up.
@@ -336,6 +337,11 @@ public static class EasyApply
 
     static readonly HashSet<string> EnWords = ["the", "and", "to", "of", "you", "with", "for", "our", "will", "are", "is", "we", "your", "experience", "team", "skills"];
     static readonly HashSet<string> PtWords = ["de", "e", "que", "com", "para", "você", "nossa", "nosso", "será", "são", "é", "uma", "os", "das", "dos", "experiência", "equipe"];
+
+    /// Text of the first selector that exists, in this order (a CSS list "a, b" would match in page order instead,
+    /// and main comes before the description inside it).
+    internal static Task<string> FirstTextAsync(IPage page, params string[] selectors) => page.EvaluateAsync<string>(
+        "ss => { for (const s of ss) { const e = document.querySelector(s); if (e) return e.innerText; } return ''; }", selectors);
 
     /// "en" or "pt" by common words; ties go to Portuguese (the default market).
     public static string Lang(string text)

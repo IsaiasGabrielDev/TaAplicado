@@ -122,7 +122,7 @@ public static class Indeed
         }
         if (!await ApplyButton(page).First.IsVisibleAsync()) return ("skip: no easy apply", job, score); // e.g. already applied
         // The Indeed account's resume is kept; this one only goes in when a question asks for the file ("Anexar o currículo *").
-        var resume = EasyApply.ResumeOf(EasyApply.Lang(await page.Locator("body").InnerTextAsync())) ?? EasyApply.ResumeOf("pt") ?? EasyApply.ResumeOf("en");
+        var resume = EasyApply.ResumeOf(EasyApply.Lang(await EasyApply.FirstTextAsync(page, "#jobDescriptionText", "[data-testid=viewjob-job-content]", "body"))) ?? EasyApply.ResumeOf("pt") ?? EasyApply.ResumeOf("en");
 
         // On the job page the link opens in the same tab; from a search card it opens a new one. Take whichever has the form.
         var pages = page.Context.Pages.Count;
@@ -167,6 +167,8 @@ public static class Indeed
                 // Questions come in questions-module and also in other steps (the demographic one has a required consent).
                 {
                     var fields = JsonSerializer.Deserialize<List<Field>>(await form.EvaluateAsync<string>(ExtractJs), Store.Json)!;
+                    for (int i = 0; i < fields.Count; i++)
+                        if (fields[i].Combo && fields[i].Options.Length == 0) fields[i] = fields[i] with { Options = await OptionsAsync(form, fields[i]) };
                     if (fields.Count > 0)
                     {
                         var resolved = await answers.ResolveAsync(id, job, fields, log);
@@ -237,9 +239,10 @@ public static class Indeed
             const req = star(raw) || !!item.querySelector('[data-testid$=-label-asterisk]') || [...item.querySelectorAll('input, select, textarea')].some(i => i.required);
             if (!req && !err) return;
             if (inputs.length) { if (!inputs.some(i => i.checked) || err) tag(radios.length ? 'radio' : 'checkbox', inputs.map(optText), '', null); return; }
-            // Indeed's own select (País): a [role=combobox] button over a searchable list; multi-selects use menuitemcheckbox.
+            // Indeed's own select (País, Categoria profissional): a [role=combobox] button over a searchable list; multi-selects
+            // use menuitemcheckbox. The list may render only once opened: no options here, OptionsAsync opens it to read them.
             const box = item.querySelector('[role=combobox]'), opt = '[role=option], [role=menuitemcheckbox]';
-            if (box && item.querySelector(opt)) {
+            if (box) {
               if (/selecione|select an option/i.test(box.innerText) || err) tag('select', [...item.querySelectorAll(opt)].map(o => clean(o.innerText)), '', null, true);
               return;
             }
@@ -252,6 +255,20 @@ public static class Indeed
           return JSON.stringify(out);
         }
         """;
+
+    /// Opens a combobox whose list renders only when open, reads its options and closes it again.
+    static async Task<string[]> OptionsAsync(IPage form, Field f)
+    {
+        var item = form.Locator($"[data-lia='{f.Id}']");
+        try
+        {
+            await item.Locator("[role=combobox]").ClickAsync(new() { Timeout = 5000 });
+            await item.Locator("[role=option], [role=menuitemcheckbox]").First.WaitForAsync(new() { Timeout = 5000 });
+            return (await item.Locator("[role=option], [role=menuitemcheckbox]").AllInnerTextsAsync()).Select(t => t.Trim()).Where(t => t != "").ToArray();
+        }
+        catch (TimeoutException) { return []; } // Claude answers blind and the fill reports the failure
+        finally { if (await item.Locator("[role=combobox][aria-expanded=true]").CountAsync() > 0) await form.Keyboard.PressAsync("Escape"); }
+    }
 
     static async Task FillAsync(IPage form, string id, List<Field> fields, Dictionary<string, string> answers, Action<string> log, List<string[]> sent)
     {
