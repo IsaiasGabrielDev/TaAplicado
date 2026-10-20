@@ -135,8 +135,9 @@ public static class Indeed
             for (int step = 0; step < 15; step++)
             {
                 await WaitHumanAsync(form, attention, ct);
-                // A step loads behind a spinner; reading it early finds no fields and no "Continuar".
-                try { await form.WaitForFunctionAsync("() => !document.querySelector('main [id^=ifl-Spinner-title]')", null, new() { Timeout = 20_000 }); }
+                // A step loads behind a spinner; reading it early finds no fields and no "Continuar". A resumed draft
+                // first shows a page-wide spinner with no <main> at all, so wait for <main> too.
+                try { await form.WaitForFunctionAsync("() => document.querySelector('main') && !document.querySelector('main [id^=ifl-Spinner-title]')", null, new() { Timeout = 20_000 }); }
                 catch (TimeoutException) { } // still loading: the step below fails it with a dump
                 if (form.Url.Contains("secure.indeed.com")) { await EnsureLoggedInAsync(form, attention, log, ct); return ("failed: login pedido no meio da candidatura", job, score); }
                 var path = new Uri(form.Url).AbsolutePath;
