@@ -25,6 +25,7 @@ const REASON = {
 };
 const reason = st => {
   const r = st.startsWith('skip: not relevant') ? 'fora do perfil: ' + st.slice(19).trim()
+    : st.startsWith('skip: not chosen') ? st.slice(17).trim()
     : st.startsWith('skip: blocked') ? st.slice(14).trim()
     : st.includes(':') ? st.slice(st.indexOf(':') + 1).trim() : '';
   return REASON[r] ?? r;
@@ -617,6 +618,7 @@ function renderLedger() {
   put($('#filters'), 'filters', [S.ledger.map(e => e.status), filter], () => FILTERS.map(([k, label]) =>
     `<button class="filter" type="button" data-filter="${k}" aria-pressed="${k === filter}">${label} <b>${count(k)}</b></button>`).join(''));
 
+  renderRescue();
   const q = ledgerSearch.value.trim().toLowerCase();
   const rows = S.ledger.filter(e => (filter === 'all' || kind(e.status) === filter) && (!q || e.job.toLowerCase().includes(q)));
   put($('#ledger'), 'ledger', [rows, filter, openRow, q, S.avisos.map(a => a.jobId)], () => rows.length ? rows.map(e => {
@@ -636,6 +638,27 @@ function renderLedger() {
       : 'Nenhuma vaga com essa situação.'}</p></td></tr>`);
 }
 ledgerSearch.addEventListener('input', renderLedger);
+
+// Repescagem: Claude's "fora do perfil" and Ultra's leftovers, with a score; the floor picks which go back to the queue.
+const scoredSkip = e => /^skip: not (relevant|chosen)/.test(e.status) && e.score != null;
+const rescue = $('#rescue');
+const rescueMin = () => { const n = Math.round(+rescue.min.value); return rescue.min.value !== '' && Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 60; };
+const rescuable = () => S.ledger.filter(e => scoredSkip(e) && e.score >= rescueMin());
+function renderRescue() {
+  rescue.hidden = filter !== 'skip' || !S.ledger.some(scoredSkip);
+  const n = rescuable().length;
+  const b = rescue.querySelector('button');
+  b.disabled = !n;
+  b.textContent = n ? `Pôr ${n === 1 ? 'a 1 vaga' : `as ${n} vagas`} na fila` : 'Nenhuma vaga com essa nota';
+}
+rescue.addEventListener('input', renderRescue);
+rescue.addEventListener('submit', e => {
+  e.preventDefault();
+  if (!rescuable().length) return;
+  send({ type: 'rescue', minScore: rescueMin() });
+  filter = 'ready'; // show where they went
+  renderLedger();
+});
 $('#filters').addEventListener('click', e => {
   const b = e.target.closest('[data-filter]');
   if (b) { filter = b.dataset.filter; renderLedger(); }

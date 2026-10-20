@@ -147,6 +147,18 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
         Store.Save("applied.json", Applied);
     }
 
+    /// Repescagem: jobs Claude judged off-profile, or Ultra left out, that scored at least min go back to the queue. The queue never
+    /// re-judges, so they are applied to as they are. Returns how many.
+    public int Rescue(int min)
+    {
+        var ids = Applied.Where(a => Rescuable(a.Value.Status) && a.Value.Score >= min).Select(a => a.Key).ToList();
+        foreach (var id in ids) Applied[id] = Applied[id] with { Status = "ready" };
+        Store.Save("applied.json", Applied);
+        return ids.Count;
+    }
+
+    static bool Rescuable(string status) => status.StartsWith("skip: not relevant") || status.StartsWith("skip: not chosen");
+
     public async Task RunAsync(RunOptions o)
     {
         if (Running || Reading) return;
@@ -179,7 +191,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             if (!filters.UseClaude && !o.Ultra && !answers.NoAi) log(null, "Filtro do Claude desligado: só empresas e palavras ignoradas filtram as vagas");
 
             int done = 0;
-            done += await ApplyAllAsync(page, queued, o, done, filters, ct);
+            done += await ApplyAllAsync(page, queued, o, done, null, ct); // vetted before they waited, or rescued on purpose
             // "Só a fila": the jobs whose avisos were answered, nothing else.
             if (o.Mode == "queue")
             {
@@ -254,12 +266,12 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
     }
 
     /// Ultra mode: vet up to 5×Max jobs, then apply only to the best Max with a score of at least o.MinScore.
-    /// Vetted-but-not-chosen jobs are not recorded, so a later run can still pick them.
+    /// Vetted-but-not-chosen jobs go to the ledger as skipped, with their score, so the repescagem can bring them back.
     // ponytail: fixed 5× pool capped at 150 jobs; expose it if the user wants to tune.
     async Task<int> UltraAsync(IBrowserContext ctx, IPage page, string listUrl, RunOptions o, int done, Filters filters, CancellationToken ct)
     {
         var target = Math.Min(o.Max * 5, 150);
-        var pool = new List<(string Id, string Job, int Score, bool Preferred)>();
+        var pool = new List<(string Id, string Job, int Score, bool Preferred, List<LogLine> Trail)>();
         int scanned = 0;
         log(null, $"Ultra seleção: analisando até {target} vagas para enviar só as {o.Max} melhores (nota ≥ {o.MinScore})");
         int Qualified() => pool.Count(p => p.Score >= o.MinScore);
@@ -295,7 +307,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
                             : await EasyApply.RunAsync(page, id, answers, null, true, Log, []);
                         if (status == "dry-run") status = "";
                     }
-                    if (status == "") { pool.Add((id, job, score ?? 0, preferred)); Log(score >= o.MinScore ? $"Na disputa: nota {score}, respostas prontas" : $"Fora da disputa: nota {score}"); }
+                    if (status == "") { pool.Add((id, job, score ?? 0, preferred, trail)); Log(score >= o.MinScore ? $"Na disputa: nota {score}, respostas prontas" : $"Fora da disputa: nota {score}"); }
                     else Record(id, status, job, trail, [], o.DryRun); // "waiting": avisos to answer, applied on a later run
                     await Task.Delay(Random.Shared.Next(3000, 6000), ct);
                 }
@@ -326,6 +338,8 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             + (best.Count >= o.Max ? "" : claudeOut ? $"; menos que {o.Max}: o Claude esgotou durante a análise" : stoppedEarly ? $"; menos que {o.Max}: análise interrompida antes de completar" : $"; menos que {o.Max} porque as outras ficaram abaixo da nota");
         SaveLastRun(LastRun! with { Ultra = text });
         log(null, $"Ultra seleção: {text}");
+        foreach (var p in pool.Except(best))
+            Record(p.Id, $"skip: not chosen: {(p.Score < o.MinScore ? $"abaixo da nota mínima ({o.MinScore})" : $"fora das {o.Max} melhores")}", p.Job, p.Trail, [], o.DryRun);
         Phase = best.Count == 1 ? "enviando a 1 escolhida" : $"enviando as {best.Count} escolhidas";
         changed();
         return await ApplyAllAsync(page, best.Select(b => b.Id).ToList(), o, done, null, ct);
@@ -469,6 +483,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             "dry-run" => "Teste concluído, candidatura descartada",
             "waiting" => "Aguardando você: há avisos para responder",
             _ when status.StartsWith("skip: not relevant") => $"Pulada: fora do perfil ({status[19..].Trim()})",
+            _ when status.StartsWith("skip: not chosen") => $"Pulada: {status[17..].Trim()}",
             _ when status.StartsWith("skip: blocked") => $"Pulada: {status[14..].Trim()}",
             _ when status.StartsWith("skip") => Indeed.Is(id) ? "Pulada: sem candidatura simplificada" : "Pulada: sem Easy Apply",
             _ => $"Falhou: {status[(status.IndexOf(':') + 1)..].Trim()}",

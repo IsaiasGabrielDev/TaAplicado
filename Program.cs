@@ -334,6 +334,11 @@ static class Program
                 case "answer":
                     lock (Store.Gate) runner.MarkReady(answers.Answer(S("id"), S("answer")));
                     break;
+                case "rescue":
+                    int rescued;
+                    lock (Store.Gate) rescued = runner.Rescue(Math.Clamp(m.GetProperty("minScore").GetInt32(), 0, 100));
+                    AddLog(null, $"Repescagem: {Answers.Plural(rescued, "vaga voltou", "vagas voltaram")} para a fila");
+                    break;
                 case "editAnswer":
                     lock (Store.Gate) answers.Edit(S("key"), S("answer"));
                     break;

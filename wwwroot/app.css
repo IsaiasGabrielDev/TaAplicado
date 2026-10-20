@@ -582,7 +582,14 @@ h1.sr { font-size: 1.75rem; }
 /* lines up with the profile sheet column, not under the side column */
 @media (min-width: 1081px) { #curriculos, #filtros, #remetente .privacy { margin-right: 20rem; } }
 .field-scale { margin-left: .25rem; font: .72rem var(--mono); color: var(--ink-3); }
-#min-wrap { width: 7.5rem; }
+#min-wrap, .rescue .field { width: 7.5rem; }
+.rescue {
+  display: flex; flex-wrap: wrap; align-items: end; gap: .75rem 1.25rem;
+  margin: 0 0 1.25rem; padding: .9rem 1.1rem;
+  background: var(--sheet); border: 1px dashed var(--kraft); border-radius: var(--r);
+}
+.rescue p { flex: 1 1 28rem; margin: 0; max-width: 68ch; color: var(--ink-2); }
+.rescue p b { margin-right: .4rem; color: var(--ink); }
 .sheet-box-intro { margin: 0 0 .9rem; max-width: 72ch; color: var(--ink-2); }
 
 /* segments follow the stripe rule while a run locks them */
