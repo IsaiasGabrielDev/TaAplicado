@@ -74,6 +74,8 @@ public class Filters
         Trace.Assert(f.Blocked("Acme dev", "") is null);             // company is after " | "
         Trace.Assert(new Filters { Words = ["estagio"] }.Blocked("Estágio .NET | X", "") is not null); // accents folded
         Trace.Assert(new Filters { Companies = ["Itaú"] }.Blocked("Dev | Itau Unibanco", "") is not null);
+        Trace.Assert(Runner.CardJob("Dev .NET\nDev .NET with verification\nAcme Corp\nSão Paulo") == "Dev .NET | Acme Corp");
+        Trace.Assert(Runner.CardJob("") is null);
         Trace.Assert(Entries(["estágio, PHP; presencial", "PHP", " "]) is ["estágio", "PHP", "presencial"]);
         Trace.Assert(Entries(["Acme, Inc.\nOutra"], commas: false) is ["Acme, Inc.", "Outra"]);
         Trace.Assert(new Filters { Companies = ["TI"] }.Blocked("Dev | Tivit", "") is null);      // whole words only
@@ -455,8 +457,24 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
 
             List<(string Id, string Card)> fresh;
             lock (Store.Gate) fresh = cards.Where(c => !Applied.ContainsKey(c.Id)).ToList();
+            // Ignored companies and words go straight from the card, without opening the job.
+            var filters = Store.Load<Filters>("filters.json");
+            foreach (var c in fresh.ToList())
+                if (CardJob(c.Card) is { } job && filters.Blocked(job, c.Card) is { } blocked)
+                {
+                    Record(c.Id, $"skip: blocked: {blocked}", job, [], [], Options?.DryRun ?? true);
+                    fresh.Remove(c);
+                }
             yield return await TriageAsync(fresh);
         }
+    }
+
+    /// "Title | Company" from a LinkedIn card: the title comes first and repeats (screen-reader copy), the company is the
+    /// next line. null for a card not rendered yet.
+    public static string? CardJob(string card)
+    {
+        var lines = card.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length < 2 ? null : $"{lines[0]} | {lines.Skip(1).FirstOrDefault(l => !l.StartsWith(lines[0])) ?? ""}";
     }
 
     /// Claude reads the list cards first (one call per page, not one per job) and only the ones worth it get opened;

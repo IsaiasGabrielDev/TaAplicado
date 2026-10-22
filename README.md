@@ -2,7 +2,7 @@
 
 **Your job applications on autopilot, with your own Claude, on your own computer, and nothing sent without a receipt.**
 
-Tá Aplicado ("done, applied" in Brazilian Portuguese) is a Windows desktop app that applies to jobs on **LinkedIn Easy Apply**, **Indeed** and **Nerdin**, using **Claude Code** to answer the application forms from a profile you write once.
+Tá Aplicado ("done, applied" in Brazilian Portuguese) is a Windows desktop app that applies to jobs on **LinkedIn Easy Apply**, **Indeed**, **Nerdin** (beta) and **Coodesh** (beta), using **Claude Code** to answer the application forms from a profile you write once.
 
 [Português](README.pt-BR.md)
 
@@ -22,7 +22,7 @@ Tá Aplicado ("done, applied" in Brazilian Portuguese) is a Windows desktop app 
 
 | Screen | What it's for |
 |---|---|
-| **Apply** | Pick the site (LinkedIn, Indeed or Nerdin), the source (recommended, preferences, profile match or a search), a max, and test or real mode. Watch the run live. |
+| **Apply** | Pick the site (LinkedIn, Indeed, Nerdin or Coodesh; the last two are in beta), the source (recommended, preferences, profile match or a search), a max, and test or real mode. Watch the run live. |
 | **Questions** | Questions Claude couldn't answer from your profile. Answer them and the jobs go back in the queue. |
 | **History** | Every job with its status (sent, waiting for you, queued, skipped, failed), its steps and its receipt. |
 | **Saved answers** | Every answer ever given, reused automatically. Approve or fix the ones Claude gave on its own. |
@@ -54,16 +54,16 @@ dotnet run
 
 1. **Before you start.** The Apply screen checks Claude and Chrome and asks you to read where your data goes and the automation risk.
 2. **Fill in your Profile**, or import it from your LinkedIn link or a pasted resume. Blank questions become questions for you later.
-3. **Apply.** Start with **Test** and a small **Max**: the app fills the forms and discards them. Log in to LinkedIn or Indeed in the Chrome window the first time; the session is kept. Nerdin needs no account.
+3. **Apply.** Start with **Test** and a small **Max**: the app fills the forms and discards them. Log in to LinkedIn or Indeed in the Chrome window the first time; the session is kept. Nerdin needs no account. Coodesh needs a login, like LinkedIn.
 4. **Come back later.** Answer what's waiting in **Questions**, check **Saved answers**, and read the receipts in **History**.
 
 ## Your data
 
-Everything lives in `%APPDATA%\LinkedInAutoApply\users\<user>\` on your computer. The app sends your profile, the form questions and job descriptions **to Anthropic (Claude)** through your own Claude account, and the application answers **to LinkedIn, Indeed or Nerdin**. Each Claude call is isolated: no tools, no saved transcript, no global Claude Code settings. **Profile → Your data → Delete this user** erases a person's whole folder.
+Everything lives in `%APPDATA%\LinkedInAutoApply\users\<user>\` on your computer. The app sends your profile, the form questions and job descriptions **to Anthropic (Claude)** through your own Claude account, and the application answers **to LinkedIn, Indeed, Nerdin or Coodesh**. Each Claude call is isolated: no tools, no saved transcript, no global Claude Code settings. **Profile → Your data → Delete this user** erases a person's whole folder.
 
 ## ⚠️ Be careful
 
-Automating applications goes against LinkedIn's and Indeed's terms of use (and may go against Nerdin's), and **your account can be restricted**. The app keeps human-like pauses, a max per run, and stops at LinkedIn's daily Easy Apply limit, but the risk is yours. Indeed often shows a human check to automated browsers: the app pauses and waits for you to solve it, and never tries to get around it.
+Automating applications goes against LinkedIn's and Indeed's terms of use (and may go against Nerdin's and Coodesh's), and **your account can be restricted**. The app keeps human-like pauses, a max per run, and stops at LinkedIn's daily Easy Apply limit, but the risk is yours. Indeed often shows a human check to automated browsers: the app pauses and waits for you to solve it, and never tries to get around it.
 
 ## Project layout
 
@@ -74,6 +74,7 @@ Automating applications goes against LinkedIn's and Indeed's terms of use (and m
 | `EasyApply.cs` | LinkedIn Easy Apply form filling (Playwright) |
 | `Indeed.cs` | Indeed apply flow ([page map](docs/indeed.md)) |
 | `Nerdin.cs` | Nerdin apply flow ([page map](docs/nerdin.md)) |
+| `Coodesh.cs` | Coodesh apply flow: interest, preferences and ScoreCard ([page map](docs/coodesh.md)) |
 | `Answers.cs` | Saved answers, questions for you, Claude calls, relevance check |
 | `agent-rules.md` | The rules Claude follows when answering and filtering |
 | `wwwroot/` | Plain HTML, CSS and JS UI; `i18n.js` holds the English; `demo.js` the made-up data |
