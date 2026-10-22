@@ -640,4 +640,4 @@ h1.sr { font-size: 1.75rem; }
 .code.coodesh::before { content: "Coodesh"; }
 /* language switch in the top bar: the same segment, compact */
 .seg.lang span { padding: .3rem .55rem; font: 600 .75rem/1.2 var(--mono); }
-.beta { font-size: .65rem; font-weight: 400; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
+.beta { font-size: .7rem; font-weight: 400; color: var(--ink-2); text-transform: uppercase; letter-spacing: .04em; }
