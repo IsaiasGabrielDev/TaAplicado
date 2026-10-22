@@ -25,7 +25,7 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        if (args.Contains("--selfcheck")) { Answers.SelfCheck(); Filters.SelfCheck(); Indeed.SelfCheck(); Nerdin.SelfCheck(); SelfCheck(); Console.WriteLine("selfcheck ok"); return; }
+        if (args.Contains("--selfcheck")) { Answers.SelfCheck(); Filters.SelfCheck(); Indeed.SelfCheck(); Nerdin.SelfCheck(); Coodesh.SelfCheck(); SelfCheck(); Console.WriteLine("selfcheck ok"); return; }
 
         // Each person on this computer is a "remetente" with its own folder under %APPDATA%\LinkedInAutoApply\users;
         // no login. Everything personal (profile, answers, ledger, Chrome login) lives there.
@@ -187,6 +187,11 @@ static class Program
             {
                 case "init":
                     if (claudeOk is null && !answers.NoAi) CheckClaude();
+                    // Dev: "--test-run coodesh "dev .net" 3" starts a test run (nothing is sent unless --send) once the page is up;
+                    // pushing state before that crashes Photino. "-" = no terms (shells drop an empty argument).
+                    if (Array.IndexOf(args, "--test-run") is var t and >= 0 && args.Length > t + 2 && !runner.Running)
+                        _ = Task.Run(() => runner.RunAsync(new(args[t + 1], args[t + 2] == "-" ? "" : args[t + 2], args.Length > t + 3 ? int.Parse(args[t + 3]) : 3,
+                            DryRun: !args.Contains("--send"), Ultra: args.Contains("--ultra"), Recent: args.Contains("--24h"))));
                     break;
                 case "switchUser":
                     if (runner.Running || runner.Reading || retrying || !Users.Exists(S("id"))) break;
@@ -311,7 +316,8 @@ static class Program
                     var opts = new RunOptions(S("mode"), S("terms"),
                         Math.Clamp(m.GetProperty("max").GetInt32(), 1, 100), m.GetProperty("dryRun").GetBoolean(),
                         m.TryGetProperty("ultra", out var ultra) && ultra.GetBoolean(),
-                        m.TryGetProperty("minScore", out var min) ? Math.Clamp(min.GetInt32(), 0, 100) : 70);
+                        m.TryGetProperty("minScore", out var min) ? Math.Clamp(min.GetInt32(), 0, 100) : 70,
+                        m.TryGetProperty("recent", out var recent) && recent.GetBoolean());
                     _ = Task.Run(() => runner.RunAsync(opts));
                     break;
                 case "saveFilters":
@@ -421,8 +427,9 @@ static class Program
                     answers.WritePrompts();
                     break;
                 case "openJob":
-                    if (Regex.IsMatch(S("id"), @"^(\d+|indeed-[0-9a-f]+|nerdin-\d+)$"))
-                        Process.Start(new ProcessStartInfo(Indeed.Is(S("id")) ? Indeed.JobUrl(S("id")) : Nerdin.Is(S("id")) ? Nerdin.JobUrl(S("id")) : $"https://www.linkedin.com/jobs/view/{S("id")}/") { UseShellExecute = true });
+                    if (Regex.IsMatch(S("id"), @"^(\d+|indeed-[0-9a-f]+|nerdin-\d+|coodesh-[a-z0-9-]+)$"))
+                        Process.Start(new ProcessStartInfo(Indeed.Is(S("id")) ? Indeed.JobUrl(S("id")) : Nerdin.Is(S("id")) ? Nerdin.JobUrl(S("id"))
+                            : Coodesh.Is(S("id")) ? Coodesh.JobUrl(S("id")) : $"https://www.linkedin.com/jobs/view/{S("id")}/") { UseShellExecute = true });
                     return;
             }
             Push();

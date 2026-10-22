@@ -10,7 +10,8 @@ namespace LinkedInAutoApply;
 /// Trail = the events of the last attempt; Sent = the receipt of every answer filled in the user's name; Score = Claude's 0-100, when it gave one.
 public record Entry(string Status, string Job, DateTime At, List<LogLine>? Trail = null, List<string[]>? Sent = null, int? Score = null);
 /// Ultra: vet many jobs first (Claude gives each a score), then apply only to the best Max scoring at least MinScore.
-public record RunOptions(string Mode, string Terms, int Max, bool DryRun, bool Ultra = false, int MinScore = 70);
+/// Recent: LinkedIn lists only jobs posted in the last 24 hours (f_TPR=r86400).
+public record RunOptions(string Mode, string Terms, int Max, bool DryRun, bool Ultra = false, int MinScore = 70, bool Recent = false);
 
 /// Per-user job filters (filters.json), checked before Claude is ever asked.
 public class Filters
@@ -157,7 +158,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
         return ids.Count;
     }
 
-    static string Site(string id) => Indeed.Is(id) ? "indeed" : Nerdin.Is(id) ? "nerdin" : "linkedin";
+    static string Site(string id) => Indeed.Is(id) ? "indeed" : Nerdin.Is(id) ? "nerdin" : Coodesh.Is(id) ? "coodesh" : "linkedin";
 
     static bool Rescuable(string status) => status.StartsWith("skip: not relevant") || status.StartsWith("skip: not chosen");
 
@@ -182,13 +183,14 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             ctx.Close += (_, _) => { log(null, "Chrome fechado"); _stopReason ??= "Chrome fechado"; _cts?.Cancel(); };
             var page = ctx.Pages.FirstOrDefault() ?? await ctx.NewPageAsync();
             log(null, (o.DryRun ? "Execução em teste iniciada (nada é enviado)" : "Execução iniciada (envio de verdade)") + (answers.NoAi ? ", modo sem IA" : ""));
-            var site = o.Mode is "indeed" or "nerdin" ? o.Mode : "linkedin";
+            var site = o.Mode is "indeed" or "nerdin" or "coodesh" ? o.Mode : "linkedin";
             // Each run works one site; "Só a fila" takes them all, so it logs into whichever its jobs need (Nerdin needs no login).
             bool Mine(string id) => o.Mode == "queue" || Site(id) == site;
             List<string> queued;
             lock (Store.Gate) queued = Applied.Where(a => a.Value.Status == "ready" && Mine(a.Key)).Select(a => a.Key).ToList();
             if (o.Mode == "queue" ? queued.Any(id => Site(id) == "linkedin") : site == "linkedin") await EnsureLoggedInAsync(ctx, page, ct);
             if (site == "indeed" || queued.Any(Indeed.Is)) await Indeed.EnsureLoggedInAsync(page, Attend, t => log(null, t), ct);
+            if (site == "coodesh" || queued.Any(Coodesh.Is)) await Coodesh.EnsureLoggedInAsync(page, Attend, t => log(null, t), ct);
             var filters = Store.Load<Filters>("filters.json");
             if (!filters.UseClaude && !o.Ultra && !answers.NoAi) log(null, "Filtro do Claude desligado: só empresas e palavras ignoradas filtram as vagas");
 
@@ -216,6 +218,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             {
                 "indeed" => Indeed.ListUrl(o.Terms),
                 "nerdin" => Nerdin.ListUrl(o.Terms),
+                "coodesh" => Coodesh.ListUrl(o.Terms),
                 "search" => $"https://www.linkedin.com/jobs/search/?keywords={Uri.EscapeDataString(o.Terms)}&f_AL=true&",
                 "preferences" => await SectionUrlAsync(page, "based on your preferences|com base nas suas prefer"),
                 "profile" => await SectionUrlAsync(page, "match your profile|correspondem ao seu perfil|combinam com (o )?seu perfil"),
@@ -225,6 +228,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             // LinkedIn itself can narrow the list to the country.
             if (site == "linkedin" && filters.CountryRule is { } only && filters.CountryMode == "only")
                 listUrl += $"location={Uri.EscapeDataString(only)}&";
+            if (site == "linkedin" && o.Recent) { listUrl += "f_TPR=r86400&"; log(null, "Só vagas das últimas 24h"); }
 
             if (o.Ultra) done += await UltraAsync(ctx, page, listUrl, o, done, filters, ct);
             else
@@ -298,6 +302,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
                     void Log(string m) { trail.Add(new(id, m, DateTime.Now)); log(id, m); }
                     var (status, job, score, preferred) = Indeed.Is(id) ? await Indeed.VetAsync(page, id, answers, filters, true, Log, Attend, ct)
                         : Nerdin.Is(id) ? await Nerdin.VetAsync(page, id, answers, filters, true, Log)
+                        : Coodesh.Is(id) ? await Coodesh.VetAsync(page, id, answers, filters, true, Log)
                         : await EasyApply.VetAsync(page, id, answers, filters, true, Log);
                     if (score is { } n) _scores[id] = n;
                     // A contender's form is answered right away (a test pass, nothing sent), while Claude still has quota:
@@ -307,6 +312,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
                         Log("Preparando as respostas do formulário");
                         (status, _, _) = Indeed.Is(id) ? await Indeed.RunAsync(page, id, answers, null, true, Log, [], Attend, ct)
                             : Nerdin.Is(id) ? await Nerdin.RunAsync(page, id, answers, null, true, Log, [])
+                            : Coodesh.Is(id) ? await Coodesh.RunAsync(page, id, answers, null, true, Log, [])
                             : await EasyApply.RunAsync(page, id, answers, null, true, Log, []);
                         if (status == "dry-run") status = "";
                     }
@@ -387,6 +393,15 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
     async IAsyncEnumerable<List<string>> FreshIdsAsync(IBrowserContext ctx, IPage page, string listUrl, [EnumeratorCancellation] CancellationToken ct)
     {
         var seen = new HashSet<string>();
+        if (listUrl.Contains("coodesh.com"))
+        {
+            var all = await Coodesh.AllIdsAsync(page, listUrl);
+            log(null, $"Coodesh: {Answers.Plural(all.Count, "vaga na lista", "vagas na lista")}");
+            List<(string Id, string Card)> mine;
+            lock (Store.Gate) mine = all.Where(c => !Applied.ContainsKey(c.Id)).ToList();
+            yield return await TriageAsync(mine);
+            yield break;
+        }
         for (int start = 0; !ct.IsCancellationRequested;)
         {
             if (listUrl.Contains("nerdin.com.br"))
@@ -419,11 +434,14 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             if (!await HasSessionAsync(ctx)) { await EnsureLoggedInAsync(ctx, page, ct); continue; } // session expired mid-run
             await page.WaitForTimeoutAsync(3000);
 
-            var ids = await page.EvaluateAsync<string[]>("""
-                () => [...new Set([...document.querySelectorAll("[data-occludable-job-id],[data-job-id],[componentkey^='job-card-component-ref-']")]
-                  .map(e => e.getAttribute('data-occludable-job-id') || e.getAttribute('data-job-id') || e.getAttribute('componentkey').slice(23)))]
-                  .filter(id => /^\d+$/.test(id))
-                """);
+            // Each id with its card text (title, company, location) for the title triage; the longest text wins, since
+            // the occludable wrapper and the card inside it carry the same id. Off-screen cards may come empty.
+            var cards = (await page.EvaluateAsync<string[][]>("""
+                () => [...document.querySelectorAll("[data-occludable-job-id],[data-job-id],[componentkey^='job-card-component-ref-']")]
+                  .map(e => [e.getAttribute('data-occludable-job-id') || e.getAttribute('data-job-id') || e.getAttribute('componentkey').slice(23), (e.innerText || '').trim()])
+                  .filter(c => /^\d+$/.test(c[0]))
+                """)).GroupBy(c => c[0]).Select(g => (Id: g.Key, Card: g.Select(c => c[1]).MaxBy(t => t.Length)!)).ToList();
+            var ids = cards.Select(c => c.Id).ToArray();
             if (ids.Length == 0)
             {
                 // Dump what LinkedIn served so the selector can be fixed against the real markup.
@@ -435,10 +453,26 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             }
             start += ids.Length;
 
-            List<string> fresh;
-            lock (Store.Gate) fresh = ids.Where(id => !Applied.ContainsKey(id)).ToList();
-            yield return fresh;
+            List<(string Id, string Card)> fresh;
+            lock (Store.Gate) fresh = cards.Where(c => !Applied.ContainsKey(c.Id)).ToList();
+            yield return await TriageAsync(fresh);
         }
+    }
+
+    /// Claude reads the list cards first (one call per page, not one per job) and only the ones worth it get opened;
+    /// the rest go to the ledger as off-profile. Short lists, empty cards (not rendered yet), Modo sem IA and the Claude
+    /// filter off skip the triage.
+    async Task<List<string>> TriageAsync(List<(string Id, string Card)> cards)
+    {
+        var known = cards.Where(c => c.Card != "").ToList();
+        if (known.Count <= 5 || answers.NoAi || !Store.Load<Filters>("filters.json").UseClaude) return cards.Select(c => c.Id).ToList();
+        var keep = await answers.TriageAsync(known.Select(c => c.Card).ToList());
+        var drop = known.Where((_, i) => !keep.Contains(i)).ToList();
+        log(null, $"Claude leu os títulos: {known.Count - drop.Count} de {known.Count} valem abrir");
+        foreach (var c in drop)
+            Record(c.Id, "skip: not relevant: título fora do perfil",
+                string.Join(" | ", c.Card.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Take(2)), [], [], Options?.DryRun ?? true);
+        return cards.Where(c => !drop.Contains(c)).Select(c => c.Id).ToList();
     }
 
     /// filters null = the jobs were already vetted (ultra picks, deferred jobs): no filter or relevance check again.
@@ -467,6 +501,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             var defer = later is not null && filters?.Prefers == true;
             var (status, job, score) = Indeed.Is(id) ? await Indeed.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, Attend, ct, defer)
                 : Nerdin.Is(id) ? await Nerdin.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, defer)
+                : Coodesh.Is(id) ? await Coodesh.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, defer)
                 : await EasyApply.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, defer);
             if (score is { } n) _scores[id] = n;
             if (status == "defer")
@@ -501,8 +536,10 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             _ when status.StartsWith("skip: not relevant") => $"Pulada: fora do perfil ({status[19..].Trim()})",
             _ when status.StartsWith("skip: not chosen") => $"Pulada: {status[17..].Trim()}",
             _ when status.StartsWith("skip: blocked") => $"Pulada: {status[14..].Trim()}",
+            "skip: applied" => "Pulada: você já se candidatou",
             _ when status.StartsWith("skip") => Indeed.Is(id) ? "Pulada: sem candidatura simplificada"
-                : Nerdin.Is(id) ? "Pulada: vaga VIP ou só no site da empresa" : "Pulada: sem Easy Apply",
+                : Nerdin.Is(id) ? "Pulada: vaga VIP ou só no site da empresa"
+                : Coodesh.Is(id) ? "Pulada: candidatura fora do Coodesh" : "Pulada: sem Easy Apply",
             _ => $"Falhou: {status[(status.IndexOf(':') + 1)..].Trim()}",
         };
         trail.Add(new(id, text, DateTime.Now));

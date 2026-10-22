@@ -162,6 +162,26 @@ public class Answers(IClaudeAgentService claude, IClaudeAgentService judge)
         catch (Exception ex) when (ex is JsonException or InvalidOperationException) { return new(true, 50, "", null, null); }
     }
 
+    /// Title triage for long lists: one call over the cards (title, company, location) before any job is opened.
+    /// Returns the indexes worth opening; anything unclear is kept, since the full relevance check still runs on it.
+    public async Task<HashSet<int>> TriageAsync(IReadOnlyList<string> cards)
+    {
+        var list = string.Join("\n", cards.Select((c, i) => $"{i}. {Regex.Replace(c, @"\s+", " ").Trim()}"));
+        var r = await judge.RunPromptAsync($$"""
+            Title triage (use the "Relevance check" rules, judging only from these list cards).
+            Which of these jobs are worth opening for the candidate? Drop only the clearly different kinds of role
+            (e.g. sales, product support, design when the candidate seeks development) or a clearly wrong seniority/location. When in doubt, keep it.
+
+            {{list}}
+
+            Return ONLY a JSON array with the numbers to open, e.g. [0,3,7].
+            """);
+        if (!r.Success) throw new ClaudeUnavailableException(Snippet(r));
+        int s = r.Content.IndexOf('['), e = r.Content.LastIndexOf(']');
+        try { return s < 0 || e <= s ? [.. Enumerable.Range(0, cards.Count)] : [.. JsonSerializer.Deserialize<int[]>(r.Content[s..(e + 1)])!]; }
+        catch (JsonException) { return [.. Enumerable.Range(0, cards.Count)]; } // unreadable: open them all
+    }
+
     /// Re-asks Claude every pending aviso (e.g. after a usage limit). Confident answers resolve the aviso
     /// (and land in Conferência); unsure ones get a suggestion. Returns jobs with no avisos left.
     public async Task<List<string>> RetryAsync(Action<string> log)

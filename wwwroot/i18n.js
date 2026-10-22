@@ -266,6 +266,11 @@ const EN = {
   'Análise interrompida a pedido: aplicando às vagas já qualificadas': 'Check stopped on request: applying to the jobs already qualified',
   'Não há mais vagas nesta lista do Indeed': 'No more jobs in this Indeed list',
   'Não há mais vagas nesta lista do Nerdin': 'No more jobs in this Nerdin list',
+  'Entre no Coodesh na janela do Chrome. A execução continua sozinha depois do login.': 'Log in to Coodesh in the Chrome window. The run resumes by itself after login.',
+  'Entre no Coodesh na janela do Chrome': 'Log in to Coodesh in the Chrome window', 'Login no Coodesh feito, sessão salva': 'Logged in to Coodesh, session saved',
+  'Coodesh · todas as vagas': 'Coodesh · all jobs', 'últimas 24h': 'last 24h', 'Qualquer data': 'Any time', 'Últimas 24h': 'Last 24h',
+  'Data da vaga': 'Date posted', 'Só vagas das últimas 24h': 'Only jobs from the last 24h', 'Interesse registrado': 'Interest registered', 'Preferências salvas': 'Preferences saved', 'ScoreCard finalizado': 'ScoreCard finished',
+  'Candidatura enviada: entrou na triagem': 'Application sent: in screening', 'Pulada: candidatura fora do Coodesh': 'Skipped: applied outside Coodesh', 'Pulada: você já se candidatou': 'Skipped: you already applied',
   'Pulada: vaga VIP ou só no site da empresa': "Skipped: VIP job or company's site only",
   '5 falhas seguidas: o LinkedIn pode ter mudado a página. Execução parada.': '5 failures in a row: the site may have changed its page. Run stopped.',
   'Currículo: mantido o que já estava no LinkedIn': 'Resume: kept the one already on LinkedIn', 'Desmarcado: seguir empresa': 'Unchecked: follow company',
@@ -282,8 +287,8 @@ const EN = {
   'você parou': 'you stopped it', 'interrompida': 'interrupted', 'fila concluída': 'queue done', 'a lista de vagas acabou': 'the job list ran out',
   'limite diário do LinkedIn': 'LinkedIn daily limit', 'Claude indisponível (limite de uso?)': 'Claude unavailable (usage limit?)', 'erro no navegador': 'browser error',
   '5 falhas seguidas': '5 failures in a row', 'começando': 'starting', 'enviando a 1 escolhida': 'sending the 1 picked',
-  'formulário não encontrado': 'form not found', 'sem candidatura simplificada': 'no easy apply', 'envio não confirmado': 'send not confirmed', 'login pedido no meio da candidatura': 'login asked mid-application',
-  'Indeed': 'Indeed', 'Nerdin': 'Nerdin', 'LinkedIn': 'LinkedIn', 'Ultra': 'Ultra', 'agora': 'just now',
+  'formulário não encontrado': 'form not found',   'sem candidatura simplificada': 'no easy apply', 'envio não confirmado': 'send not confirmed', 'login pedido no meio da candidatura': 'login asked mid-application',
+  'Indeed': 'Indeed', 'Nerdin': 'Nerdin', 'Coodesh': 'Coodesh', 'LinkedIn': 'LinkedIn', 'Ultra': 'Ultra', 'agora': 'just now',
 };
 
 // Host-made lines and texts with variable parts. tr() runs on the captured parts that are themselves texts.
@@ -350,7 +355,7 @@ const EN_RX = [
     `LinkedIn did not show the text of the ${n} options. Type it as it appears on the form, in the job’s language (e.g. Yes or Sim).`],
   [/^O LinkedIn recusou a resposta anterior: (.*)$/, (_, e) => `LinkedIn rejected the previous answer: ${e}`],
   [/^(Ver|Fechar) detalhes: (.+)$/, (_, k, t) => `${k === 'Ver' ? 'Show' : 'Hide'} details: ${t}`],
-  [/^Abrir vaga no (LinkedIn|Indeed|Nerdin)$/, (_, s) => `Open job on ${s}`],
+  [/^Abrir vaga no (LinkedIn|Indeed|Nerdin|Coodesh)$/, (_, s) => `Open job on ${s}`],
   [/^(Enviadas|Na fila|Puladas|Falhas): (\d+)$/, (_, k, n) => `${EN[k]}: ${n}`],
   [/^Excluída: (.+)$/, (_, q) => `Deleted: ${q}`],
   [/^usada em (.+)$/, (_, j) => `used in ${j}`],

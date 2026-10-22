@@ -635,7 +635,8 @@ h1.sr { font-size: 1.75rem; }
 .ask-msg { display: grid; gap: .6rem; margin-bottom: 2rem; }
 .ask-msg-text { resize: vertical; min-height: 14rem; line-height: 1.5; background: #FFFDF7; }
 /* an Indeed object carries the site's name where LinkedIn's carries the registered "R" */
-.code.indeed::before, .code.nerdin::before { content: "Indeed"; padding: 0 .35rem; font: 600 .7rem/1 var(--ui); letter-spacing: 0; }
+.code.indeed::before, .code.nerdin::before, .code.coodesh::before { content: "Indeed"; padding: 0 .35rem; font: 600 .7rem/1 var(--ui); letter-spacing: 0; }
 .code.nerdin::before { content: "Nerdin"; }
+.code.coodesh::before { content: "Coodesh"; }
 /* language switch in the top bar: the same segment, compact */
 .seg.lang span { padding: .3rem .55rem; font: 600 .75rem/1.2 var(--mono); }

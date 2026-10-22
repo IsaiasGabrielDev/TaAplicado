@@ -33,9 +33,11 @@ const reason = st => {
 const stamp = st => `<span class="stamp ${kind(st)}">${LABEL[kind(st)] ?? esc(st)}</span>`;
 const isIndeed = id => String(id).startsWith('indeed-');
 const isNerdin = id => String(id).startsWith('nerdin-');
-const siteOf = id => isIndeed(id) ? 'Indeed' : isNerdin(id) ? 'Nerdin' : 'LinkedIn';
+const isCoodesh = id => String(id).startsWith('coodesh-');
+const siteOf = id => isIndeed(id) ? 'Indeed' : isNerdin(id) ? 'Nerdin' : isCoodesh(id) ? 'Coodesh' : 'LinkedIn';
 const code = id => isIndeed(id) ? `<span class="code indeed"><span>${esc(id.slice(7))}</span></span>`
   : isNerdin(id) ? `<span class="code nerdin"><span>${esc(id.slice(7))}</span></span>`
+  : isCoodesh(id) ? `<span class="code coodesh"><span>${esc(id.split('-').pop())}</span></span>`
   : `<span class="code"><span>${esc(String(id).replace(/\B(?=(\d{3})+(?!\d))/g, ' '))}</span></span>`;
 const splitJob = job => { const i = (job ?? '').lastIndexOf(' | '); return i < 0 ? [job ?? '', ''] : [job.slice(0, i), job.slice(i + 3)]; };
 const pad = n => String(n).padStart(2, '0');
@@ -147,7 +149,7 @@ const typed = () => form.site.value !== 'linkedin' || form.mode.value === 'searc
 function syncTerms() {
   form.terms.disabled = S?.running;
   form.terms.closest('.field').hidden = !typed();
-  $('#origin').hidden = form.site.value !== 'linkedin';
+  $('#origin').hidden = $('#age').hidden = form.site.value !== 'linkedin'; // the 24h filter is LinkedIn's (f_TPR)
   renderSuggest();
 }
 
@@ -191,11 +193,12 @@ document.addEventListener('click', e => { if (armed && !e.target.closest('#go, #
 form.addEventListener('submit', e => {
   e.preventDefault();
   if (S?.running) return send({ type: 'stop' });
-  if (typed() && !form.terms.value.trim()) { form.terms.focus(); form.terms.setCustomValidity(t('Escreva os termos da pesquisa')); form.terms.reportValidity(); return; }
+  // Coodesh without terms = its whole list
+  if (typed() && form.site.value !== 'coodesh' && !form.terms.value.trim()) { form.terms.focus(); form.terms.setCustomValidity(t('Escreva os termos da pesquisa')); form.terms.reportValidity(); return; }
   if (needsConfirm('go')) return;
   const ultra = form.pick.value === 'ultra';
   send({ type: 'start', mode: pickMode(), terms: form.terms.value.trim(), max: Math.max(1, +form.max.value || 25), dryRun: isTest(),
-    ultra, minScore: minScore() });
+    ultra, minScore: minScore(), recent: form.site.value === 'linkedin' && form.age.value === 'day' });
 });
 form.terms.addEventListener('input', () => form.terms.setCustomValidity(''));
 $('#go-queue').addEventListener('click', () => {
@@ -235,7 +238,8 @@ function renderDispatch() {
   const me = S.users.find(u => u.id === S.currentUser)?.name;
   // Armed: restate exactly what goes out, so the second click is a decision about this send.
   const ticket = armed === 'queue' ? `${t('Só a fila')} · ${plural(queued, 'vaga', 'vagas')}`
-    : [{ indeed: `Indeed · “${form.terms.value.trim()}”`, nerdin: `Nerdin · “${form.terms.value.trim()}”`, search: t('Pesquisa “{q}”', { q: form.terms.value.trim() }), preferences: t('Baseado nas preferências'), profile: t('Combinam com seu perfil') }[pickMode()] ?? t('Recomendadas'),
+    : [{ indeed: `Indeed · “${form.terms.value.trim()}”`, nerdin: `Nerdin · “${form.terms.value.trim()}”`, coodesh: form.terms.value.trim() ? `Coodesh · “${form.terms.value.trim()}”` : t('Coodesh · todas as vagas'), search: t('Pesquisa “{q}”', { q: form.terms.value.trim() }), preferences: t('Baseado nas preferências'), profile: t('Combinam com seu perfil') }[pickMode()] ?? t('Recomendadas'),
+       ...(form.site.value === 'linkedin' && form.age.value === 'day' ? [t('últimas 24h')] : []),
        ultra ? t('Ultra seleção, nota ≥ {n}', { n: min }) : t('Normal'), t('até {n}', { n: max })].join(' · ');
   $('#go-note').textContent = S.running ? ''
     : armed ? t('{ticket}, em nome de {me}. Clique de novo para confirmar; mude algo acima para cancelar.', { ticket, me: me ?? t('você') })
