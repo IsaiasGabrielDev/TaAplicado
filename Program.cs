@@ -25,7 +25,7 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        if (args.Contains("--selfcheck")) { Answers.SelfCheck(); Filters.SelfCheck(); Indeed.SelfCheck(); SelfCheck(); Console.WriteLine("selfcheck ok"); return; }
+        if (args.Contains("--selfcheck")) { Answers.SelfCheck(); Filters.SelfCheck(); Indeed.SelfCheck(); Nerdin.SelfCheck(); SelfCheck(); Console.WriteLine("selfcheck ok"); return; }
 
         // Each person on this computer is a "remetente" with its own folder under %APPDATA%\LinkedInAutoApply\users;
         // no login. Everything personal (profile, answers, ledger, Chrome login) lives there.
@@ -421,8 +421,8 @@ static class Program
                     answers.WritePrompts();
                     break;
                 case "openJob":
-                    if (Regex.IsMatch(S("id"), @"^(\d+|indeed-[0-9a-f]+)$"))
-                        Process.Start(new ProcessStartInfo(Indeed.Is(S("id")) ? Indeed.JobUrl(S("id")) : $"https://www.linkedin.com/jobs/view/{S("id")}/") { UseShellExecute = true });
+                    if (Regex.IsMatch(S("id"), @"^(\d+|indeed-[0-9a-f]+|nerdin-\d+)$"))
+                        Process.Start(new ProcessStartInfo(Indeed.Is(S("id")) ? Indeed.JobUrl(S("id")) : Nerdin.Is(S("id")) ? Nerdin.JobUrl(S("id")) : $"https://www.linkedin.com/jobs/view/{S("id")}/") { UseShellExecute = true });
                     return;
             }
             Push();

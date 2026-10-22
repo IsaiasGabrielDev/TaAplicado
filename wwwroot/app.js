@@ -32,7 +32,10 @@ const reason = st => {
 };
 const stamp = st => `<span class="stamp ${kind(st)}">${LABEL[kind(st)] ?? esc(st)}</span>`;
 const isIndeed = id => String(id).startsWith('indeed-');
+const isNerdin = id => String(id).startsWith('nerdin-');
+const siteOf = id => isIndeed(id) ? 'Indeed' : isNerdin(id) ? 'Nerdin' : 'LinkedIn';
 const code = id => isIndeed(id) ? `<span class="code indeed"><span>${esc(id.slice(7))}</span></span>`
+  : isNerdin(id) ? `<span class="code nerdin"><span>${esc(id.slice(7))}</span></span>`
   : `<span class="code"><span>${esc(String(id).replace(/\B(?=(\d{3})+(?!\d))/g, ' '))}</span></span>`;
 const splitJob = job => { const i = (job ?? '').lastIndexOf(' | '); return i < 0 ? [job ?? '', ''] : [job.slice(0, i), job.slice(i + 3)]; };
 const pad = n => String(n).padStart(2, '0');
@@ -137,14 +140,14 @@ document.addEventListener('click', e => {
 /* ── candidatar: run controls ───────────────────────────── */
 const form = $('#dispatch');
 const isTest = () => form.run.value === 'test';
-// Terms only exist for a search (LinkedIn or Indeed); Recomendadas has nothing to type, so the field leaves the bar.
-// The site switch picks where to look; Indeed has only its search, so its origin is always the terms.
-const pickMode = () => form.site.value === 'indeed' ? 'indeed' : form.mode.value;
-const typed = () => pickMode() === 'search' || pickMode() === 'indeed';
+// Terms only exist for a search (LinkedIn, Indeed or Nerdin); Recomendadas has nothing to type, so the field leaves the bar.
+// The site switch picks where to look; Indeed and Nerdin have only their search, so their origin is always the terms.
+const pickMode = () => form.site.value === 'linkedin' ? form.mode.value : form.site.value;
+const typed = () => form.site.value !== 'linkedin' || form.mode.value === 'search';
 function syncTerms() {
   form.terms.disabled = S?.running;
   form.terms.closest('.field').hidden = !typed();
-  $('#origin').hidden = form.site.value === 'indeed';
+  $('#origin').hidden = form.site.value !== 'linkedin';
   renderSuggest();
 }
 
@@ -232,7 +235,7 @@ function renderDispatch() {
   const me = S.users.find(u => u.id === S.currentUser)?.name;
   // Armed: restate exactly what goes out, so the second click is a decision about this send.
   const ticket = armed === 'queue' ? `${t('Só a fila')} · ${plural(queued, 'vaga', 'vagas')}`
-    : [{ indeed: `Indeed · “${form.terms.value.trim()}”`, search: t('Pesquisa “{q}”', { q: form.terms.value.trim() }), preferences: t('Baseado nas preferências'), profile: t('Combinam com seu perfil') }[pickMode()] ?? t('Recomendadas'),
+    : [{ indeed: `Indeed · “${form.terms.value.trim()}”`, nerdin: `Nerdin · “${form.terms.value.trim()}”`, search: t('Pesquisa “{q}”', { q: form.terms.value.trim() }), preferences: t('Baseado nas preferências'), profile: t('Combinam com seu perfil') }[pickMode()] ?? t('Recomendadas'),
        ultra ? t('Ultra seleção, nota ≥ {n}', { n: min }) : t('Normal'), t('até {n}', { n: max })].join(' · ');
   $('#go-note').textContent = S.running ? ''
     : armed ? t('{ticket}, em nome de {me}. Clique de novo para confirmar; mude algo acima para cancelar.', { ticket, me: me ?? t('você') })
@@ -631,7 +634,7 @@ function renderLedger() {
       <td class="company" translate="no">${esc(company)}</td>
       <td class="num">${ddmm(e.at)}</td>
       <td>${stamp(e.status)}${r ? `<span class="reason">${esc(r)}</span>` : ''}</td>
-      <td><button class="icon-btn" type="button" data-open="${esc(e.id)}" aria-label="Abrir vaga no ${isIndeed(e.id) ? 'Indeed' : 'LinkedIn'}" title="Abrir vaga no ${isIndeed(e.id) ? 'Indeed' : 'LinkedIn'}">${icon('i-open')}</button></td>
+      <td><button class="icon-btn" type="button" data-open="${esc(e.id)}" aria-label="Abrir vaga no ${siteOf(e.id)}" title="Abrir vaga no ${siteOf(e.id)}">${icon('i-open')}</button></td>
     </tr>${open ? `<tr class="detail" id="d-${esc(e.id)}"><td colspan="6">${jobDetail(e)}</td></tr>` : ''}`;
   }).join('') : `<tr><td colspan="6"><p class="empty">${q ? 'Nenhuma vaga com esse termo.' : filter === 'all'
       ? '<b>Nenhuma vaga ainda.</b> Cada vaga processada entra aqui com a data e a situação.'

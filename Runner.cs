@@ -157,6 +157,8 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
         return ids.Count;
     }
 
+    static string Site(string id) => Indeed.Is(id) ? "indeed" : Nerdin.Is(id) ? "nerdin" : "linkedin";
+
     static bool Rescuable(string status) => status.StartsWith("skip: not relevant") || status.StartsWith("skip: not chosen");
 
     public async Task RunAsync(RunOptions o)
@@ -180,13 +182,13 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             ctx.Close += (_, _) => { log(null, "Chrome fechado"); _stopReason ??= "Chrome fechado"; _cts?.Cancel(); };
             var page = ctx.Pages.FirstOrDefault() ?? await ctx.NewPageAsync();
             log(null, (o.DryRun ? "Execução em teste iniciada (nada é enviado)" : "Execução iniciada (envio de verdade)") + (answers.NoAi ? ", modo sem IA" : ""));
-            var indeed = o.Mode == "indeed";
-            // Each run works one site; "Só a fila" takes both, so it logs into whichever its jobs need.
-            bool Mine(string id) => o.Mode == "queue" || Indeed.Is(id) == indeed;
+            var site = o.Mode is "indeed" or "nerdin" ? o.Mode : "linkedin";
+            // Each run works one site; "Só a fila" takes them all, so it logs into whichever its jobs need (Nerdin needs no login).
+            bool Mine(string id) => o.Mode == "queue" || Site(id) == site;
             List<string> queued;
             lock (Store.Gate) queued = Applied.Where(a => a.Value.Status == "ready" && Mine(a.Key)).Select(a => a.Key).ToList();
-            if (!indeed && (o.Mode != "queue" || queued.Any(id => !Indeed.Is(id)))) await EnsureLoggedInAsync(ctx, page, ct);
-            if (indeed || queued.Any(Indeed.Is)) await Indeed.EnsureLoggedInAsync(page, Attend, t => log(null, t), ct);
+            if (o.Mode == "queue" ? queued.Any(id => Site(id) == "linkedin") : site == "linkedin") await EnsureLoggedInAsync(ctx, page, ct);
+            if (site == "indeed" || queued.Any(Indeed.Is)) await Indeed.EnsureLoggedInAsync(page, Attend, t => log(null, t), ct);
             var filters = Store.Load<Filters>("filters.json");
             if (!filters.UseClaude && !o.Ultra && !answers.NoAi) log(null, "Filtro do Claude desligado: só empresas e palavras ignoradas filtram as vagas");
 
@@ -213,6 +215,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             var listUrl = o.Mode switch
             {
                 "indeed" => Indeed.ListUrl(o.Terms),
+                "nerdin" => Nerdin.ListUrl(o.Terms),
                 "search" => $"https://www.linkedin.com/jobs/search/?keywords={Uri.EscapeDataString(o.Terms)}&f_AL=true&",
                 "preferences" => await SectionUrlAsync(page, "based on your preferences|com base nas suas prefer"),
                 "profile" => await SectionUrlAsync(page, "match your profile|correspondem ao seu perfil|combinam com (o )?seu perfil"),
@@ -220,7 +223,7 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             };
 
             // LinkedIn itself can narrow the list to the country.
-            if (!indeed && filters.CountryRule is { } only && filters.CountryMode == "only")
+            if (site == "linkedin" && filters.CountryRule is { } only && filters.CountryMode == "only")
                 listUrl += $"location={Uri.EscapeDataString(only)}&";
 
             if (o.Ultra) done += await UltraAsync(ctx, page, listUrl, o, done, filters, ct);
@@ -293,8 +296,8 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
                     CurrentJob = id; changed();
                     var trail = new List<LogLine>();
                     void Log(string m) { trail.Add(new(id, m, DateTime.Now)); log(id, m); }
-                    var (status, job, score, preferred) = Indeed.Is(id)
-                        ? await Indeed.VetAsync(page, id, answers, filters, true, Log, Attend, ct)
+                    var (status, job, score, preferred) = Indeed.Is(id) ? await Indeed.VetAsync(page, id, answers, filters, true, Log, Attend, ct)
+                        : Nerdin.Is(id) ? await Nerdin.VetAsync(page, id, answers, filters, true, Log)
                         : await EasyApply.VetAsync(page, id, answers, filters, true, Log);
                     if (score is { } n) _scores[id] = n;
                     // A contender's form is answered right away (a test pass, nothing sent), while Claude still has quota:
@@ -302,8 +305,8 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
                     if (status == "" && score >= o.MinScore)
                     {
                         Log("Preparando as respostas do formulário");
-                        (status, _, _) = Indeed.Is(id)
-                            ? await Indeed.RunAsync(page, id, answers, null, true, Log, [], Attend, ct)
+                        (status, _, _) = Indeed.Is(id) ? await Indeed.RunAsync(page, id, answers, null, true, Log, [], Attend, ct)
+                            : Nerdin.Is(id) ? await Nerdin.RunAsync(page, id, answers, null, true, Log, [])
                             : await EasyApply.RunAsync(page, id, answers, null, true, Log, []);
                         if (status == "dry-run") status = "";
                     }
@@ -386,6 +389,19 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
         var seen = new HashSet<string>();
         for (int start = 0; !ct.IsCancellationRequested;)
         {
+            if (listUrl.Contains("nerdin.com.br"))
+            {
+                await page.GotoAsync(listUrl + (start / 20 + 1));
+                var found = await Nerdin.PageIdsAsync(page);
+                // Past the last page: no cards, or the last page again.
+                if (found.Count == 0 || found.All(seen.Contains)) { log(null, "Não há mais vagas nesta lista do Nerdin"); break; }
+                seen.UnionWith(found);
+                start += 20;
+                List<string> mine;
+                lock (Store.Gate) mine = found.Where(id => !Applied.ContainsKey(id)).ToList();
+                yield return mine;
+                continue;
+            }
             await page.GotoAsync(listUrl + "start=" + start);
             if (listUrl.Contains("indeed.com"))
             {
@@ -449,8 +465,8 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             void Log(string m) { trail.Add(new(id, m, DateTime.Now)); log(id, m); }
 
             var defer = later is not null && filters?.Prefers == true;
-            var (status, job, score) = Indeed.Is(id)
-                ? await Indeed.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, Attend, ct, defer)
+            var (status, job, score) = Indeed.Is(id) ? await Indeed.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, Attend, ct, defer)
+                : Nerdin.Is(id) ? await Nerdin.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, defer)
                 : await EasyApply.RunAsync(page, id, answers, filters, o.DryRun, Log, receipt, defer);
             if (score is { } n) _scores[id] = n;
             if (status == "defer")
@@ -485,7 +501,8 @@ public class Runner(Answers answers, Action<string?, string> log, Action changed
             _ when status.StartsWith("skip: not relevant") => $"Pulada: fora do perfil ({status[19..].Trim()})",
             _ when status.StartsWith("skip: not chosen") => $"Pulada: {status[17..].Trim()}",
             _ when status.StartsWith("skip: blocked") => $"Pulada: {status[14..].Trim()}",
-            _ when status.StartsWith("skip") => Indeed.Is(id) ? "Pulada: sem candidatura simplificada" : "Pulada: sem Easy Apply",
+            _ when status.StartsWith("skip") => Indeed.Is(id) ? "Pulada: sem candidatura simplificada"
+                : Nerdin.Is(id) ? "Pulada: vaga VIP ou só no site da empresa" : "Pulada: sem Easy Apply",
             _ => $"Falhou: {status[(status.IndexOf(':') + 1)..].Trim()}",
         };
         trail.Add(new(id, text, DateTime.Now));

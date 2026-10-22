@@ -2,7 +2,7 @@
 
 **Suas candidaturas no piloto automático, com o seu próprio Claude, no seu computador, e nada enviado sem recibo.**
 
-Aplicativo desktop para Windows que se candidata a vagas pelo **Easy Apply do LinkedIn** e pelo **Indeed**, usando o **Claude Code** para responder os formulários a partir de um perfil que você preenche uma vez.
+Aplicativo desktop para Windows que se candidata a vagas pelo **Easy Apply do LinkedIn**, pelo **Indeed** e pelo **Nerdin**, usando o **Claude Code** para responder os formulários a partir de um perfil que você preenche uma vez.
 
 [English](README.md)
 
@@ -22,7 +22,7 @@ Aplicativo desktop para Windows que se candidata a vagas pelo **Easy Apply do Li
 
 | Tela | Para quê |
 |---|---|
-| **Candidatar** | Escolha o site (LinkedIn ou Indeed), a origem (recomendadas, preferências, combinam com seu perfil ou pesquisa), o máximo e se é teste ou de verdade. Acompanhe a execução ao vivo. |
+| **Candidatar** | Escolha o site (LinkedIn, Indeed ou Nerdin), a origem (recomendadas, preferências, combinam com seu perfil ou pesquisa), o máximo e se é teste ou de verdade. Acompanhe a execução ao vivo. |
 | **Avisos** | Perguntas que o Claude não soube responder pelo seu perfil. Ao responder, as vagas voltam para a fila. |
 | **Histórico** | Cada vaga com a situação (enviada, aguardando você, na fila, pulada, falhou), as etapas e o recibo. |
 | **Respostas salvas** | Tudo o que já foi respondido, reusado sozinho. Aprove ou corrija o que o Claude respondeu por conta própria. |
@@ -73,7 +73,7 @@ Atalho: **Importar do LinkedIn ou de um texto**. Cole o link do seu perfil ou o 
 
 Na aba **Candidatar**, escolha o **site**, a **origem**, o **Máximo** e **De verdade** ou **Teste**. No teste, o app preenche os formulários e descarta; nada é enviado. Comece pelo teste com um máximo pequeno.
 
-Uma janela do Chrome abre. **Na primeira vez**, entre no LinkedIn ou no Indeed nela; o login fica salvo. No Indeed, entre **pelo e-mail** (código enviado ao seu e-mail): o login com Google não funciona em navegador automatizado. Se o Indeed pedir uma verificação de humano, resolva na janela; o app espera.
+Uma janela do Chrome abre. **Na primeira vez**, entre no LinkedIn ou no Indeed nela; o login fica salvo. No Indeed, entre **pelo e-mail** (código enviado ao seu e-mail): o login com Google não funciona em navegador automatizado. Se o Indeed pedir uma verificação de humano, resolva na janela; o app espera. O Nerdin não precisa de conta.
 
 ### 4. Quando voltar
 
@@ -120,6 +120,7 @@ Automatizar candidaturas vai contra os termos de uso do LinkedIn e do Indeed, e 
 | `Runner.cs` | Execução: listas de vagas, fila, limites, login |
 | `EasyApply.cs` | Formulário do Easy Apply do LinkedIn (Playwright) |
 | `Indeed.cs` | Candidatura no Indeed ([mapa das páginas](docs/indeed.md)) |
+| `Nerdin.cs` | Candidatura no Nerdin ([mapa das páginas](docs/nerdin.md)) |
 | `Answers.cs` | Respostas salvas, avisos, chamadas ao Claude e filtro de relevância |
 | `agent-rules.md` | Regras que o Claude segue ao responder e ao filtrar vagas |
 | `wwwroot/` | Interface em HTML, CSS e JS puros; `i18n.js` tem o inglês; `demo.js` os dados fictícios |

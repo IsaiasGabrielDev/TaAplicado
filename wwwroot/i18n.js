@@ -265,6 +265,8 @@ const EN = {
   'Ultra seleção ainda não funciona no Indeed: execução normal': 'Ultra selection does not work on Indeed yet: normal run',
   'Análise interrompida a pedido: aplicando às vagas já qualificadas': 'Check stopped on request: applying to the jobs already qualified',
   'Não há mais vagas nesta lista do Indeed': 'No more jobs in this Indeed list',
+  'Não há mais vagas nesta lista do Nerdin': 'No more jobs in this Nerdin list',
+  'Pulada: vaga VIP ou só no site da empresa': "Skipped: VIP job or company's site only",
   '5 falhas seguidas: o LinkedIn pode ter mudado a página. Execução parada.': '5 failures in a row: the site may have changed its page. Run stopped.',
   'Currículo: mantido o que já estava no LinkedIn': 'Resume: kept the one already on LinkedIn', 'Desmarcado: seguir empresa': 'Unchecked: follow company',
   'Desmarcado: e-mails com vagas': 'Unchecked: job e-mails', 'O LinkedIn bloqueou o Easy Apply por hoje (limite diário)': 'LinkedIn blocked Easy Apply for today (daily limit)',
@@ -280,8 +282,8 @@ const EN = {
   'você parou': 'you stopped it', 'interrompida': 'interrupted', 'fila concluída': 'queue done', 'a lista de vagas acabou': 'the job list ran out',
   'limite diário do LinkedIn': 'LinkedIn daily limit', 'Claude indisponível (limite de uso?)': 'Claude unavailable (usage limit?)', 'erro no navegador': 'browser error',
   '5 falhas seguidas': '5 failures in a row', 'começando': 'starting', 'enviando a 1 escolhida': 'sending the 1 picked',
-  'sem candidatura simplificada': 'no easy apply', 'envio não confirmado': 'send not confirmed', 'login pedido no meio da candidatura': 'login asked mid-application',
-  'Indeed': 'Indeed', 'LinkedIn': 'LinkedIn', 'Ultra': 'Ultra', 'agora': 'just now',
+  'formulário não encontrado': 'form not found', 'sem candidatura simplificada': 'no easy apply', 'envio não confirmado': 'send not confirmed', 'login pedido no meio da candidatura': 'login asked mid-application',
+  'Indeed': 'Indeed', 'Nerdin': 'Nerdin', 'LinkedIn': 'LinkedIn', 'Ultra': 'Ultra', 'agora': 'just now',
 };
 
 // Host-made lines and texts with variable parts. tr() runs on the captured parts that are themselves texts.
@@ -319,6 +321,7 @@ const EN_RX = [
   [/^(empresa ignorada|palavra ignorada|fora do país|outro idioma) \((.+)\)$/, (_, k, v) =>
     `${{ 'empresa ignorada': 'ignored company', 'palavra ignorada': 'ignored word', 'fora do país': 'outside the country', 'outro idioma': 'other language' }[k]} (${v})`],
   [/^Etapa (\d+) concluída$/, (_, n) => `Step ${n} done`],
+  [/^o formulário não passou da etapa (\d+)$/, (_, n) => `the form did not get past step ${n}`],
   [/^Claude: (\d+) perguntas? novas?$/, (_, n) => `Claude: ${pl(n, 'new question', 'new questions')}`],
   [/^Sem IA: (\d+) perguntas? novas? vir(?:a|am) avisos?$/, (_, n) => `No AI: ${pl(n, 'new question becomes', 'new questions become')} questions for you`],
   [/^Claude: nota (\d+)(?:, (.+))?$/, (_, n, w) => `Claude: score ${n}${w ? `, ${w}` : ''}`],
@@ -347,7 +350,7 @@ const EN_RX = [
     `LinkedIn did not show the text of the ${n} options. Type it as it appears on the form, in the job’s language (e.g. Yes or Sim).`],
   [/^O LinkedIn recusou a resposta anterior: (.*)$/, (_, e) => `LinkedIn rejected the previous answer: ${e}`],
   [/^(Ver|Fechar) detalhes: (.+)$/, (_, k, t) => `${k === 'Ver' ? 'Show' : 'Hide'} details: ${t}`],
-  [/^Abrir vaga no (LinkedIn|Indeed)$/, (_, s) => `Open job on ${s}`],
+  [/^Abrir vaga no (LinkedIn|Indeed|Nerdin)$/, (_, s) => `Open job on ${s}`],
   [/^(Enviadas|Na fila|Puladas|Falhas): (\d+)$/, (_, k, n) => `${EN[k]}: ${n}`],
   [/^Excluída: (.+)$/, (_, q) => `Deleted: ${q}`],
   [/^usada em (.+)$/, (_, j) => `used in ${j}`],
